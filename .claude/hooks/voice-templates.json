@@ -1,0 +1,25 @@
+{
+  "templates": {
+    "document_creation": "我已完成文档创建工作",
+    "document_creation_with_name": "我已完成文档创建工作，生成了名为 {name} 的文件",
+    "file_deletion": "我已完成文件清理工作，删除了不需要的测试文件",
+    "code_optimization": "我已完成代码优化工作",
+    "analysis": "我已完成分析工作，提供了详细说明",
+    "bug_fixing": "我已完成问题修复工作",
+    "testing": "我已完成测试工作",
+    "git_operations": "我已完成代码提交工作",
+    "configuration": "我已完成配置工作",
+    "general_with_task": "我已完成您要求的任务：{task}",
+    "general_default": "我已完成本次工作任务"
+  },
+  "keywords": {
+    "document_creation": ["创建", "生成", "制作", "Word", "文档"],
+    "file_deletion": ["删除", "清理", "移除"],
+    "code_optimization": ["优化", "改进", "重构", "修改"],
+    "analysis": ["分析", "查看", "检查", "告诉我"],
+    "bug_fixing": ["修复", "解决", "bug", "调试"],
+    "testing": ["测试", "test", "运行"],
+    "git_operations": ["提交", "推送", "commit", "push", "上传"],
+    "configuration": ["配置", "设置", "安装", "部署"]
+  }
+}

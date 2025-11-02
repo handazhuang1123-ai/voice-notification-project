@@ -1,0 +1,31 @@
+# Voice Notification Hook - Git Ignore File
+
+# Log files (generated at runtime)
+*.log
+voice-debug.log
+voice-notifications.log
+voice-notification-errors.log
+voice-job-errors.log
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*~
+*.tmp
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test output
+test-output/
+temp/
+
+# User-specific configuration (optional)
+# Uncomment if you want to ignore user customizations
+# .claude/hooks/voice-templates-custom.json

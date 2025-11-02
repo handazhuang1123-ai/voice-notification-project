@@ -1,0 +1,4 @@
+{
+  "event": "Stop",
+  "transcript_path": ".claude/hooks/test-transcript.jsonl"
+}
