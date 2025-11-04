@@ -7,6 +7,9 @@ voice-notifications.log
 voice-notification-errors.log
 voice-job-errors.log
 
+# Temporary diagnostic files
+summary-input-diagnosis.txt
+
 # Windows system files
 Thumbs.db
 desktop.ini
@@ -25,6 +28,26 @@ desktop.ini
 # Test output
 test-output/
 temp/
+
+# Claude Code agents (temporary files)
+.claude/agents/
+
+# Node modules
+node_modules/
+
+# Audio files (generated at runtime)
+*.mp3
+*.wav
+
+# Test and diagnostic scripts (keep local only)
+test-*.ps1
+diagnose-*.ps1
+check-*.ps1
+
+# Temporary output files
+*.bin
+ollama-*.txt
+test-*.txt
 
 # User-specific configuration (optional)
 # Uncomment if you want to ignore user customizations

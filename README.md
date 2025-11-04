@@ -2,15 +2,16 @@
 
 ## 📋 项目概述
 
-这是一个智能语音播报系统，当 Claude Code 完成工作时（Stop 事件），自动分析对话内容并生成智能总结，通过 Windows TTS 语音播报。
+这是一个智能语音播报系统，当 Claude Code 完成工作时（Stop 事件），自动分析对话内容并生成智能总结，通过高品质 TTS 引擎语音播报。
 
 **核心特性：**
-- ✅ 读取用户最后一条消息和 Claude 回复
-- ✅ 基于关键词智能识别 8 种工作场景
-- ✅ 生成个性化播报内容（非固定模板）
-- ✅ 支持提取文件名等上下文信息
-- ✅ 完整的调试日志系统
-- ✅ UTF-8 中文支持
+- ✅ **AI智能总结** - 集成 Ollama，根据对话内容生成个性化总结
+- ✅ **高品质语音** - 使用 Microsoft Edge TTS，自然流畅的中英文播报
+- ✅ **三层降级方案** - edge-tts → SAPI → 模板，确保高可用性
+- ✅ **模块化架构** - 消息提取、AI总结、语音播放独立模块
+- ✅ **双语支持** - 自动检测中英文，使用对应提示词和语音
+- ✅ **完整日志系统** - 每个模块独立日志，便于调试
+- ✅ **智能重试机制** - 等待 transcript 写入完成，避免消息丢失
 
 ## 🗂️ 项目结构
 
@@ -19,18 +20,47 @@ voice-notification-project/
 ├── .claude/
 │   ├── settings.json                    # Claude Code 配置
 │   └── hooks/
-│       ├── voice-notification.ps1       # 主脚本（250行）
-│       ├── voice-templates.json         # 消息模板和关键词配置
-│       ├── voice-debug.log              # 调试日志（自动生成）
+│       ├── voice-notification.ps1       # 主编排脚本（175行）
+│       ├── Extract-Messages.ps1         # 消息提取模块（162行）
+│       ├── Generate-VoiceSummary.ps1    # AI总结生成模块（238行）
+│       ├── Play-EdgeTTS.ps1             # Edge TTS播放模块（99行）
+│       ├── voice-templates.json         # 备用模板配置
+│       ├── voice-debug.log              # 主脚本日志（自动生成）
+│       ├── extract-messages.log         # 消息提取日志（自动生成）
+│       ├── ai-summary.log               # AI总结日志（自动生成）
+│       ├── edge-tts.log                 # TTS播放日志（自动生成）
 │       └── voice-notifications.log      # 播报历史（自动生成）
 ├── README.md                            # 本文档
-├── USAGE.md                             # 使用说明
-└── CHANGELOG.md                         # 更新日志
+└── test-edge-tts.ps1                    # Edge TTS测试脚本
 ```
 
 ## 🚀 快速开始
 
-### 1. 安装部署
+### 1. 环境依赖
+
+**必需：**
+- Windows 10/11
+- PowerShell 5.1+
+- Python 3.7+ （用于 edge-tts）
+- Ollama （用于 AI 总结）
+
+**安装步骤：**
+
+```powershell
+# 1. 安装 edge-tts（高品质语音）
+pip install edge-tts
+
+# 2. 安装 Ollama（已安装可跳过）
+# 从 https://ollama.ai 下载安装
+
+# 3. 拉取中文优化模型（推荐 qwen2.5:1.5b，仅 940MB）
+ollama pull qwen2.5:1.5b
+
+# 可选：安装其他模型作为备用
+# ollama pull llama2:latest
+```
+
+### 2. 部署项目
 
 **方法 A：独立项目使用**
 ```bash
@@ -45,34 +75,79 @@ cd /path/to/your/project/voice-notification-project
 cp -r voice-notification-project/.claude /path/to/your/project/
 ```
 
-### 2. 验证安装
+### 3. 验证安装
 
 运行测试脚本验证功能：
 ```powershell
-cd .claude/hooks
-# 查看脚本是否可执行
-powershell -ExecutionPolicy Bypass -File voice-notification.ps1 -?
+# 测试 edge-tts 语音播放
+powershell -ExecutionPolicy Bypass -File test-edge-tts.ps1
+
+# 应该听到两段语音：
+# 1. "Task completed"
+# 2. "Created user manual Word document with sections"
 ```
 
-### 3. Claude Code 中使用
+### 4. Claude Code 中使用
 
 1. 在项目根目录打开 Claude Code
-2. 进行任意对话（例如："帮我创建一个 Word 文档"）
+2. 进行任意对话（例如："帮我创建一个用户手册"）
 3. Claude 完成工作后，自动触发语音播报
 
-## 🎯 支持的场景
+**预期效果：**
+- 听到自然流畅的中文/英文播报
+- 内容是 AI 根据对话自动生成的总结
+- 播放时长约 3-8 秒
 
-| 场景 | 触发关键词 | 播报示例 |
-|------|-----------|---------|
-| **文档创建** | 创建、生成、Word、文档 | "我已完成文档创建工作，生成了名为 报告.docx 的文件" |
-| **文件删除** | 删除、清理、移除 | "我已完成文件清理工作，删除了不需要的测试文件" |
-| **代码优化** | 优化、改进、重构、修改 | "我已完成代码优化工作" |
-| **代码分析** | 分析、查看、检查、告诉我 | "我已完成分析工作，提供了详细说明" |
-| **问题修复** | 修复、解决、bug、调试 | "我已完成问题修复工作" |
-| **测试工作** | 测试、test、运行 | "我已完成测试工作" |
-| **Git 操作** | 提交、推送、commit、push | "我已完成代码提交工作" |
-| **配置设置** | 配置、设置、安装、部署 | "我已完成配置工作" |
-| **通用任务** | （其他） | "我已完成您要求的任务：[用户问题首句]" |
+## 🎯 AI 智能总结 - Jarvis 人格
+
+系统使用 **Jarvis 人格**（钢铁侠的AI助手）生成播报内容，专业、高效、略带精致感。
+
+### 播报示例
+
+| 用户请求 | Jarvis 的播报 |
+|---------|--------------|
+| "Create a user manual" | "Manual completed with 5 chapters." |
+| "Optimize code performance" | "Performance improved by 50%." |
+| "Fix login bug" | "Login fixed. 2 script files updated." |
+| "帮我创建用户手册" | "先生，文档已创建完成，包含5个章节" |
+| "优化代码性能" | "代码优化成功，性能提升50%" |
+| "修复登录问题" | "任务完成，先生。已修复登录问题" |
+
+### Jarvis 人格特点
+
+**性格定位：**
+- ✅ 专业、高效、精准
+- ✅ 略带精致感但不过度正式
+- ✅ 自信、冷静
+- ✅ 直接、切中要点
+
+**播报风格：**
+- 称呼用户为"先生"（中文）或"sir"（英文）
+- 简洁有力，每句话都有重点
+- 提取最关键的1个数字或1个结果
+- 60字以内（中文）/ 50字以内（英文）
+
+**技术特性：**
+- 🚀 **0.5-1秒生成**（qwen2.5:1.5b 模型）
+- 🎭 **人格一致性**（每次播报都保持 Jarvis 风格）
+- 🌍 **双语支持**（自动检测中英文）
+- 🎯 **智能提取**（关键数字、文件名、核心成果）
+
+### 自定义 AI 人格
+
+配置文件：`.claude/hooks/ai-personality.json`
+
+预设人格选项：
+- **Jarvis** - 钢铁侠的专业AI助手（默认）
+- **Friday** - 更温暖的女性AI助手
+- **Cortana** - 光环系列的战术AI
+- **Neutral** - 无人格化，纯功能性
+
+可自定义：
+- 人格名称和描述
+- 性格特征
+- 用户称呼（先生/老板/指挥官等）
+- 示例播报风格
 
 ## ⚙️ 配置说明
 
@@ -127,26 +202,52 @@ powershell -ExecutionPolicy Bypass -File voice-notification.ps1 -?
 
 ## 🔧 工作原理
 
-### 执行流程
+### 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  voice-notification.ps1                      │
+│                    （主编排脚本）                              │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+         ┌───────────┼───────────┐
+         ▼           ▼           ▼
+┌────────────┐ ┌────────────┐ ┌────────────┐
+│ Extract-   │ │ Generate-  │ │ Play-      │
+│ Messages   │ │ VoiceSummary│ │ EdgeTTS    │
+│            │ │            │ │            │
+│ 提取消息    │ │ AI总结生成  │ │ 语音播放    │
+└────────────┘ └─────┬──────┘ └─────┬──────┘
+                     │              │
+                     ▼              ▼
+              ┌─────────────┐ ┌─────────────┐
+              │  Ollama API │ │ edge-tts CLI│
+              │ (qwen2.5)   │ │ (微软TTS)   │
+              └─────────────┘ └─────────────┘
+```
+
+### 执行流程（v2.0）
 
 ```
 Claude 完成任务 → Stop Hook 触发
     ↓
-读取 stdin JSON 输入（包含 transcript_path）
+[voice-notification.ps1] 读取 stdin JSON 输入
     ↓
-读取 transcript 文件（JSONL 格式）
+[Extract-Messages.ps1] 智能等待 transcript 稳定（最多2.4s）
     ↓
-从后向前扫描，提取：
-  - 最后一条用户消息
-  - Claude 的最后回复
+[Extract-Messages.ps1] 提取最后一条用户消息和 Claude 回复
     ↓
-关键词匹配 → 选择场景模板
+[Generate-VoiceSummary.ps1] 检测语言（中文/英文）
     ↓
-生成智能总结（支持占位符替换）
+[Generate-VoiceSummary.ps1] 调用 Ollama API 生成总结
+    ↓  （成功）                    ↓（失败）
+AI总结（80字以内）          模板降级（关键词匹配）
+    ↓                              ↓
+[Play-EdgeTTS.ps1] 调用 edge-tts 生成 MP3
+    ↓  （成功）                    ↓（失败/离线）
+高品质播放                    SAPI 降级播放
     ↓
-启动后台 Job 播放语音（非阻塞）
-    ↓
-记录日志 → 脚本退出
+记录日志 → 脚本退出（总耗时 < 2秒）
 ```
 
 ### Transcript 格式支持
@@ -246,7 +347,57 @@ if ($userMessage.IndexOf("创建") -ge 0 -and $userMessage.IndexOf("文档") -ge
 Get-Content voice-debug.log -Encoding UTF8
 ```
 
-### 问题 4：脚本执行权限错误
+### 问题 4：edge-tts 播放失败，降级到 SAPI
+
+**检查步骤：**
+1. 查看 `edge-tts.log` 确认错误原因
+2. 测试网络连接：`ping api.cognitive.microsofttranslator.com`
+3. 手动测试 edge-tts：
+   ```powershell
+   edge-tts --voice zh-CN-XiaoxiaoNeural --text "测试" --write-media test.mp3
+   ```
+
+**常见原因：**
+- ❌ 网络断开或防火墙阻止
+- ❌ edge-tts 未正确安装
+- ❌ 微软服务暂时不可用
+
+**解决：**
+```powershell
+# 重新安装 edge-tts
+pip uninstall edge-tts
+pip install edge-tts
+
+# 测试网络（如果失败，系统会自动降级到 SAPI）
+```
+
+### 问题 5：Ollama 总结失败，使用模板播报
+
+**检查步骤：**
+1. 查看 `ai-summary.log` 确认错误
+2. 确认 Ollama 正在运行：
+   ```powershell
+   ollama list
+   ```
+
+**常见原因：**
+- ❌ Ollama 服务未启动
+- ❌ 模型未下载（qwen2.5:1.5b）
+- ❌ 超时（3秒限制）
+
+**解决：**
+```powershell
+# 启动 Ollama
+ollama serve
+
+# 拉取模型
+ollama pull qwen2.5:1.5b
+
+# 测试模型
+ollama run qwen2.5:1.5b "你好"
+```
+
+### 问题 6：脚本执行权限错误
 
 **解决：**
 ```powershell
@@ -278,9 +429,33 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 2. **无需修改脚本** - 脚本会自动读取新配置
 
-### 调整语音参数
+### 调整 edge-tts 语音参数
 
-编辑 `voice-notification.ps1` 中的语音设置：
+编辑 `Play-EdgeTTS.ps1` 更改语音选项：
+
+```powershell
+# 中文语音选项（女声为主）
+$Voice = "zh-CN-XiaoxiaoNeural"   # 温柔女声（默认）
+# $Voice = "zh-CN-XiaoyiNeural"   # 活泼女声
+# $Voice = "zh-CN-XiaomoNeural"   # 沉稳女声
+
+# 中文语音选项（男声）
+# $Voice = "zh-CN-YunxiNeural"    # 自然男声
+# $Voice = "zh-CN-YunyangNeural"  # 新闻播报男声
+
+# 英文语音选项
+# $Voice = "en-US-JennyNeural"    # 自然女声
+# $Voice = "en-US-GuyNeural"      # 自然男声
+```
+
+**查看所有可用语音：**
+```powershell
+edge-tts --list-voices
+```
+
+### 调整 SAPI 备用语音（离线模式）
+
+编辑 `voice-notification.ps1` 中的 SAPI 设置：
 
 ```powershell
 $voice = New-Object -ComObject SAPI.SpVoice
@@ -301,10 +476,25 @@ $searchStr2 = [char]0x53EB + [char]0x505A  # "叫做"
 
 ## 📊 性能特性
 
-- **执行时间：** < 300ms（包含语音播放启动）
-- **非阻塞设计：** 使用 Start-Job 后台播放，脚本立即返回
-- **内存占用：** < 20MB
-- **日志文件：** 每条记录 ~100 字节
+### v2.0 性能指标
+
+| 指标 | 数值 | 说明 |
+|-----|------|------|
+| **总响应时间** | 1.5-3秒 | 从触发到开始播放 |
+| **消息提取** | 800ms-2.4s | 智能等待 transcript 稳定 |
+| **AI总结生成** | 0.5-1秒 | qwen2.5:1.5b 模型 |
+| **语音生成** | 0.3-0.6秒 | edge-tts 网络请求 |
+| **内存占用** | < 150MB | 包含 Ollama + edge-tts |
+| **磁盘占用** | ~1GB | qwen2.5:1.5b (940MB) + edge-tts (5MB) |
+| **日志大小** | ~200 bytes/次 | 4个独立日志文件 |
+
+### 降级方案性能
+
+| 方案 | 响应速度 | 音质 | 依赖 |
+|-----|---------|------|------|
+| **edge-tts + AI** | ⭐⭐⭐⭐ (1.5-3s) | ⭐⭐⭐⭐⭐ | 网络 + Ollama |
+| **SAPI + AI** | ⭐⭐⭐⭐⭐ (1s) | ⭐⭐ | 仅 Ollama |
+| **SAPI + 模板** | ⭐⭐⭐⭐⭐ (<0.5s) | ⭐⭐ | 无 |
 
 ## 🔒 安全说明
 
@@ -314,6 +504,16 @@ $searchStr2 = [char]0x53EB + [char]0x505A  # "叫做"
 - ✅ 不执行任何用户输入的代码
 
 ## 📜 版本历史
+
+### v2.0.0 (2025-11-03)
+- ✅ **重大升级：集成 edge-tts** - 高品质自然语音
+- ✅ **AI 智能总结** - 集成 Ollama (qwen2.5:1.5b)
+- ✅ **模块化架构** - 4个独立脚本模块
+- ✅ **双语支持** - 自动检测中英文
+- ✅ **三层降级** - edge-tts → SAPI → 模板
+- ✅ **智能重试** - 等待 transcript 稳定（最多2.4s）
+- ✅ **独立日志** - 每个模块独立日志文件
+- ✅ **80字总结** - 优化字数限制，适合语音
 
 ### v1.0.0 (2025-11-02)
 - ✅ 初始版本

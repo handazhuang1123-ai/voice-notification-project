@@ -1,0 +1,256 @@
+# AI Voice Summary Generation Module v4 - Best Practice Based
+# Uses qwen2.5:7b-instruct + Smart Content Filtering + Optimized Prompt
+
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$UserMessage,
+
+    [Parameter(Mandatory=$false)]
+    [string]$ClaudeReply = "",
+
+    [Parameter(Mandatory=$false)]
+    [int]$TimeoutSeconds = 10
+)
+
+$ErrorActionPreference = "SilentlyContinue"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+function Write-ModuleLog {
+    param($message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logPath = Join-Path (Split-Path $PSScriptRoot) "hooks\ai-summary-v2.log"
+    $logEntry = "$timestamp | $message`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::AppendAllText($logPath, $logEntry, $utf8NoBom)
+}
+
+function Remove-TechnicalNoise {
+    param([string]$Text)
+
+    Write-ModuleLog "Starting intelligent noise filtering..."
+
+    # 1. Remove tool_use blocks
+    $filtered = $Text -replace '(?s)<tool_use>.*?</tool_use>', '[FILTERED]'
+
+    # 2. Remove code blocks
+    $filtered = $filtered -replace '(?s)```[\s\S]*?```', '[CODE]'
+
+    # 3. Remove file paths (Windows and Unix)
+    $filtered = $filtered -replace '[A-Z]:\\[^\s]+', '[PATH]'
+    $filtered = $filtered -replace '/[\w/\-\.]+\.(ps1|py|js|ts|md|txt|json)', '[FILE]'
+
+    # 4. Remove log timestamps
+    $filtered = $filtered -replace '\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}', ''
+
+    # 5. Remove extra blank lines
+    $filtered = $filtered -replace '(\r?\n){3,}', "`n`n"
+    $filtered = $filtered.Trim()
+
+    $originalLength = $Text.Length
+    $filteredLength = $filtered.Length
+    $reduction = [math]::Round(($originalLength - $filteredLength) / $originalLength * 100, 1)
+
+    Write-ModuleLog "Filtering complete: $originalLength -> $filteredLength chars (reduced $reduction%)"
+
+    return $filtered
+}
+
+function Get-EnhancedFallback {
+    param($UserMsg, $ClaudeMsg)
+
+    Write-ModuleLog "Using enhanced fallback template"
+
+    $userLower = $UserMsg.ToLower()
+    $claudeLower = $ClaudeMsg.ToLower()
+
+    if ($userLower -match "fix|bug|debug|solve|repair") {
+        if ($claudeLower -match "auth|login|credential") { return "Authentication fixed" }
+        if ($claudeLower -match "encod|utf|charset") { return "Encoding fixed" }
+        if ($claudeLower -match "error|exception") { return "Error fixed" }
+        return "Issue fixed"
+    }
+    elseif ($userLower -match "create|generate|make|write") {
+        if ($claudeLower -match "document|word|docx") { return "Document created" }
+        if ($claudeLower -match "report|summary") { return "Report generated" }
+        if ($claudeLower -match "script|code") { return "Script created" }
+        return "Content created"
+    }
+    elseif ($userLower -match "optim|improve|refactor|enhance") {
+        if ($claudeLower -match "performance|speed|fast") { return "Performance optimized" }
+        if ($claudeLower -match "code|script") { return "Code optimized" }
+        return "Optimization completed"
+    }
+    elseif ($userLower -match "analy|check|review|explain|understand") {
+        return "Analysis completed"
+    }
+    elseif ($userLower -match "test") {
+        return "Testing completed"
+    }
+    elseif ($userLower -match "install|setup|config") {
+        return "Configuration done"
+    }
+    else {
+        return "Task completed"
+    }
+}
+
+function Invoke-OllamaAPI {
+    param($UserMsg, $ClaudeMsg)
+
+    Write-ModuleLog "=== Ollama API call started ==="
+
+    # 1. Smart filtering of technical noise
+    $claudeFiltered = Remove-TechnicalNoise -Text $ClaudeMsg
+
+    # 2. Smart truncation (keep more content)
+    $userTruncated = if ($UserMsg.Length -gt 800) {
+        $UserMsg.Substring(0, 400) + " ... " + $UserMsg.Substring($UserMsg.Length - 400, 400)
+    } else {
+        $UserMsg
+    }
+
+    $claudeTruncated = if ($claudeFiltered.Length -gt 1500) {
+        # Prioritize conclusion part
+        $claudeFiltered.Substring(0, 500) + " ... " + $claudeFiltered.Substring($claudeFiltered.Length - 1000, 1000)
+    } else {
+        $claudeFiltered
+    }
+
+    Write-ModuleLog "Input processed: User=$($userTruncated.Length) Claude=$($claudeTruncated.Length)"
+
+    # 3. Use verified best prompt template (from research report)
+    $promptLines = @(
+        "Task: Summarize what AI assistant Claude accomplished",
+        "",
+        "Input:",
+        "User: $userTruncated",
+        "Claude: $claudeTruncated",
+        "",
+        "Requirements:",
+        "1. Output in Chinese (MUST)",
+        "2. 20-30 characters maximum",
+        "3. Format: [action][result] or Sir, [action][result]",
+        "4. Ignore technical details, only core conclusion",
+        "",
+        "Examples:",
+        "- Sir, authentication issue fixed",
+        "- Code optimized, performance improved 50%",
+        "- Document created with 5 chapters",
+        "",
+        "Output Chinese summary directly:"
+    )
+    $prompt = $promptLines -join "`n"
+
+    # 4. Select best model
+    $availableModels = @("qwen2.5:7b-instruct", "qwen2.5:7b", "qwen2.5:1.5b", "deepseek-r1:14b")
+    $selectedModel = "qwen2.5:7b-instruct"
+
+    try {
+        $modelsResponse = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method GET -TimeoutSec 2
+        $installedModels = $modelsResponse.models | ForEach-Object { $_.name }
+
+        foreach ($model in $availableModels) {
+            if ($installedModels -contains $model) {
+                $selectedModel = $model
+                Write-ModuleLog "Selected model: $selectedModel"
+                break
+            }
+        }
+    } catch {
+        Write-ModuleLog "Cannot detect models, using default: $selectedModel"
+    }
+
+    # 5. Optimized API parameters (based on research recommendations)
+    $body = @{
+        model = $selectedModel
+        prompt = $prompt
+        stream = $false
+        options = @{
+            temperature = 0.5
+            top_p = 0.9
+            num_predict = 80
+            num_ctx = 8192
+            repeat_penalty = 1.1
+        }
+    } | ConvertTo-Json -Depth 10
+
+    # 6. Send request (correct UTF-8 handling)
+    try {
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+
+        Write-ModuleLog "Sending request to Ollama..."
+        $webResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/generate" `
+            -Method POST `
+            -Body $bodyBytes `
+            -ContentType "application/json; charset=utf-8" `
+            -TimeoutSec $TimeoutSeconds `
+            -UseBasicParsing
+
+        # 7. Parse response
+        $responseText = $webResponse.Content
+        $response = $responseText | ConvertFrom-Json
+        $summary = $response.response.Trim()
+
+        Write-ModuleLog "Raw response length: $($summary.Length)"
+
+        # 8. Clean output
+        # Remove thinking tags (deepseek-r1)
+        $summary = $summary -replace '(?s)<think>.*?</think>', ''
+        $summary = $summary -replace '(?s)<think>.*$', ''
+        $summary = $summary.Trim()
+
+        # Remove common English prefixes
+        $summary = $summary -replace '^(I have |I completed |Claude has |Summary: )', ''
+        $summary = $summary.Trim()
+
+        # Remove quotes
+        $summary = $summary -replace '^[\"''""]+', ''
+        $summary = $summary -replace '[\"''""]+$', ''
+        $summary = $summary.Trim()
+
+        # 9. Length limit
+        if ($summary.Length -gt 60) {
+            $summary = $summary.Substring(0, 60)
+            Write-ModuleLog "Summary truncated to 60 chars"
+        }
+
+        Write-ModuleLog "Final summary: $summary (Length: $($summary.Length))"
+
+        # Validate output
+        if ([string]::IsNullOrWhiteSpace($summary) -or $summary.Length -lt 3) {
+            Write-ModuleLog "Summary invalid (too short or empty)"
+            return $null
+        }
+
+        return $summary
+
+    } catch {
+        Write-ModuleLog "ERROR: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+# ===== Main Flow =====
+try {
+    Write-ModuleLog "=== Starting voice summary generation ==="
+    Write-ModuleLog "User message length: $($UserMessage.Length)"
+    Write-ModuleLog "Claude reply length: $($ClaudeReply.Length)"
+
+    # Try Ollama
+    $aiSummary = Invoke-OllamaAPI -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
+
+    if (![string]::IsNullOrWhiteSpace($aiSummary)) {
+        Write-ModuleLog "=== AI summary success ==="
+        return $aiSummary
+    } else {
+        # Fallback
+        $fallbackSummary = Get-EnhancedFallback -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
+        Write-ModuleLog "=== Using fallback: $fallbackSummary ==="
+        return $fallbackSummary
+    }
+
+} catch {
+    Write-ModuleLog "FATAL ERROR: $($_.Exception.Message)"
+    return "Task completed"
+}
