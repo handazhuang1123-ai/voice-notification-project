@@ -16,7 +16,7 @@ PowerShell 语音通知工具，使用 Ollama AI 生成个性化通知文本，�
 - **格式化**: 4空格缩进，OTBS风格，UTF-8 BOM，CRLF换行
 - **文档**: 所有导出函数必须有完整的 Comment-Based Help
 
-详细格式化规则参考：`.editorconfig`, `.gitattributes`
+> **严格参考**: `.editorconfig` 定义了编码格式规则，`.gitattributes` 规范了换行符处理
 
 ### Comment-Based Help 模板（双语版本）
 ```powershell
@@ -63,7 +63,7 @@ function Verb-Noun {
 - **Error 级别问题会阻止提交**
 - **Warning 级别问题会显示警告但允许提交**
 
-详细规则配置：`PSScriptAnalyzerSettings.psd1`
+> **严格参考**: `PSScriptAnalyzerSettings.psd1` 定义了所有自动检查规则
 
 ---
 
@@ -81,7 +81,7 @@ if (-not $ApiKey) {
 }
 ```
 
-敏感文件已在 `.gitignore` 中配置：`config.local.ps1`, `credentials.json`, `.env` 等
+> **严格参考**: `.gitignore` 已配置敏感文件忽略规则（`config.local.ps1`, `credentials.json`, `.env` 等）
 
 ---
 
@@ -108,14 +108,10 @@ if (-not $ApiKey) {
 
 ---
 
-## 参考文档
+## 其他参考文档
 
-- `docs/PowerShell项目标准化最佳实践调研报告.md` - 详细最佳实践
-- `.editorconfig` - 编辑器格式规则
-- `.gitattributes` - Git文件属性
-- `.gitignore` - 忽略文件配置
-- `PSScriptAnalyzerSettings.psd1` - 代码检查规则（待创建）
+- **`docs/PowerShell项目标准化最佳实践调研报告.md`** - PowerShell 详细最佳实践和深入说明
 
 ---
 
-**维护者**: 壮爸 | **版本**: 1.1 | **更新**: 2025-01-06
+**维护者**: 壮爸 | **版本**: 1.2 | **更新**: 2025-01-06
