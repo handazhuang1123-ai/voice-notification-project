@@ -1,54 +1,130 @@
-# Voice Notification Hook - Git Ignore File
+# PowerShell Voice Notification Project - Git Ignore File
+# PowerShell 语音通知项目 - Git 忽略文件
 
-# Log files (generated at runtime)
+# PowerShell module cache
+# PowerShell 模块缓存
+**/PSGetModuleInfo.xml
+*.stackdump
+
+# PowerShell test results
+# PowerShell 测试结果
+TestResults/
+testResults.xml
+coverage.xml
+*.coverage
+testOutput/
+*.Tests.ps1.log
+
+# Logs and temporary files
+# 日志和临时文件
 *.log
-voice-debug.log
-voice-notifications.log
-voice-notification-errors.log
-voice-job-errors.log
-
-# Temporary diagnostic files
-summary-input-diagnosis.txt
-
-# Windows system files
-Thumbs.db
-desktop.ini
-
-# Backup files
-*.bak
-*~
 *.tmp
-
-# IDE/Editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Test output
-test-output/
+*.temp
+logs/
 temp/
 
-# Claude Code agents (temporary files)
-.claude/agents/
+# Configuration and sensitive information
+# 配置和敏感信息
+config.local.ps1
+config.local.json
+*.local.json
+appsettings.local.json
+.env
+.env.local
+.env.*.local
+credentials.json
+secrets.json
+*.credentials
 
-# Node modules
+# IDE and editors
+# IDE 和编辑器
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+*.iml
+*.iws
+.cursor/
+
+# Operating system generated files
+# 操作系统生成的文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+*~
+.directory
+.Trash-*
+
+# Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
 
-# Audio files (generated at runtime)
-*.mp3
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+
+# Build output
+# 构建输出
+dist/
+build/
+out/
+bin/
+obj/
+*.dll
+*.exe
+*.nupkg
+
+# Documentation generation
+# 文档生成
+docs/_site/
+docs/.jekyll-cache/
+
+# Backup files
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# Archive files
+# 压缩文件
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+
+# Database files
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# Project specific ignore
+# 项目特定忽略
+models/
+audio_cache/
 *.wav
-
-# Test and diagnostic scripts (keep local only)
-test-*.ps1
-diagnose-*.ps1
-check-*.ps1
-
-# Temporary output files
-*.bin
-ollama-*.txt
-test-*.txt
-
-# User-specific configuration (optional)
-# Uncomment if you want to ignore user customizations
-# .claude/hooks/voice-templates-custom.json
+*.mp3
+notification_history/
