@@ -1,46 +1,50 @@
-# Edge-TTS Voice Playback Module
-# High-quality text-to-speech using Microsoft Edge TTS
+﻿# ==============================================================================
+# Script: Play-EdgeTTS.ps1
+# Purpose: Edge-TTS 语音播放模块 - 高质量中文语音合成
+# Author: 壮爸
+# Refactored: 2025-01-06
+# ==============================================================================
+
+#Requires -Version 5.1
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Text,
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$Voice = "zh-CN-XiaoxiaoNeural",
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [int]$TimeoutSeconds = 10
 )
 
+# ============== 编码配置 ==============
 $ErrorActionPreference = "SilentlyContinue"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
-function Write-ModuleLog {
-    param($message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logPath = Join-Path (Split-Path $PSScriptRoot) "hooks\edge-tts.log"
-    $logEntry = "$timestamp | $message`n"
-    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::AppendAllText($logPath, $logEntry, $utf8NoBom)
-}
+# ============== 导入模块 ==============
+Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
 
+# ============== 主逻辑 ==============
 try {
-    Write-ModuleLog "=== Edge-TTS Playback Started ==="
-    Write-ModuleLog "Text: $Text"
-    Write-ModuleLog "Voice: $Voice"
+    Write-VoiceInfo "=== Edge-TTS Playback Started ==="
+    Write-VoiceDebug "Text: $Text"
+    Write-VoiceDebug "Voice: $Voice"
 
     # Generate temporary file path
     $tempPath = Join-Path $env:TEMP "voice-notification-$(Get-Random).mp3"
-    Write-ModuleLog "Temp file: $tempPath"
+    Write-VoiceDebug "Temp file: $tempPath"
 
     # Call edge-tts to generate audio
-    Write-ModuleLog "Calling edge-tts..."
+    Write-VoiceDebug "Calling edge-tts..."
 
     # Write text to a temporary UTF-8 file to avoid encoding issues
     $textFilePath = Join-Path $env:TEMP "voice-notification-text-$(Get-Random).txt"
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText($textFilePath, $Text, $utf8NoBom)
-    Write-ModuleLog "Text file created: $textFilePath"
+    Write-VoiceDebug "Text file created: $textFilePath"
 
     # Use file input instead of command-line argument for better encoding handling
     $argumentList = @(
@@ -57,7 +61,7 @@ try {
     Remove-Item $textFilePath -Force -ErrorAction SilentlyContinue
 
     if ($edgeTtsProcess.ExitCode -ne 0) {
-        Write-ModuleLog "ERROR: edge-tts failed with exit code $($edgeTtsProcess.ExitCode)"
+        Write-VoiceError "edge-tts failed with exit code $($edgeTtsProcess.ExitCode)"
         return @{ Success = $false; Error = "edge-tts generation failed" }
     }
 
@@ -65,15 +69,15 @@ try {
     Start-Sleep -Milliseconds 200
 
     if (!(Test-Path $tempPath)) {
-        Write-ModuleLog "ERROR: Audio file not generated"
+        Write-VoiceError "Audio file not generated"
         return @{ Success = $false; Error = "Audio file not found" }
     }
 
     $fileSize = (Get-Item $tempPath).Length
-    Write-ModuleLog "Audio file generated: $fileSize bytes"
+    Write-VoiceDebug "Audio file generated: $fileSize bytes"
 
     # Play audio using Windows Media Player COM object
-    Write-ModuleLog "Starting playback..."
+    Write-VoiceDebug "Starting playback..."
     $jobScript = {
         param($audioPath)
         try {
@@ -104,17 +108,17 @@ try {
     $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
     Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
 
-    Write-ModuleLog "Playback result: $result"
+    Write-VoiceDebug "Playback result: $result"
 
     # Cleanup temp file
     Start-Sleep -Milliseconds 500
     Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
-    Write-ModuleLog "Temp file cleaned up"
+    Write-VoiceDebug "Temp file cleaned up"
 
-    Write-ModuleLog "=== Edge-TTS Playback Completed ==="
+    Write-VoiceInfo "=== Edge-TTS Playback Completed ==="
     return @{ Success = $true; Result = $result }
 
 } catch {
-    Write-ModuleLog "FATAL ERROR: $($_.Exception.Message)"
+    Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
     return @{ Success = $false; Error = $_.Exception.Message }
 }

@@ -128,3 +128,5 @@ audio_cache/
 *.wav
 *.mp3
 notification_history/
+n.temp/
+.temp/
