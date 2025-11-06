@@ -1,0 +1,30 @@
+ 我需要研究 Claude Code 的 post-tool-use hook 功能，特别是：
+
+       1. PostToolUse hook 如何工作？
+       2. CLAUDE_TOOL_RESULT 环境变量的格式和内容是什么？
+       3. 如何在 PostToolUse hook 中获取被修改/创建的文件路径？
+       4. PostToolUse hook 的输出是否会显示给用户？如果不显示，如何调试？
+       5. 有没有最佳实践或示例代码展示如何编写 PostToolUse hook 脚本？
+
+       请搜索 Claude Code 官方文档、GitHub issues、Reddit 讨论等资源，找到相关信息。
+
+       重点关注：
+       - Claude Code hooks 文档
+       - CLAUDE_TOOL_RESULT 环境变量的具体格式
+       - 如何从工具结果中提取文件路径
+       - hook 脚本的调试方法
+  ⎿  > 我需要研究 Claude Code 的 post-tool-use hook 功能，特别是：
+
+     1. PostToolUse hook 如何工作？
+     2. CLAUDE_TOOL_RESULT 环境变量的格式和内容是什么？
+     3. 如何在 PostToolUse hook 中获取被修改/创建的文件路径？
+     4. PostToolUse hook 的输出是否会显示给用户？如果不显示，如何调试？
+     5. 有没有最佳实践或示例代码展示如何编写 PostToolUse hook 脚本？
+
+     请搜索 Claude Code 官方文档、GitHub issues、Reddit 讨论等资源，找到相关信息。
+
+     重点关注：
+     - Claude Code hooks 文档
+     - CLAUDE_TOOL_RESULT 环境变量的具体格式
+     - 如何从工具结果中提取文件路径
+     - hook 脚本的调试方法
