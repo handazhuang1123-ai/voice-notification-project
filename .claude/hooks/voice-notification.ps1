@@ -48,44 +48,56 @@ function Get-EmotionStyle {
 
     # 加载配置
     $configPath = Join-Path $PSScriptRoot "voice-config.json"
-    $defaultEmotion = "assistant"
 
-    if (Test-Path $configPath) {
-        try {
-            $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if (-not $config.UseSSML) {
-                return ""
-            }
-            $defaultEmotion = $config.Emotion
-        } catch {
-            Write-VoiceDebug "Config load failed, using default emotion"
+    if (!(Test-Path $configPath)) {
+        Write-VoiceWarning "Config file not found, using default emotion"
+        return "assistant"
+    }
+
+    try {
+        $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+        # 检查是否启用 SSML
+        if (-not $config.UseSSML) {
+            return ""
         }
+
+        # 检查是否启用自动检测
+        if (-not $config.EmotionSettings.UseAutoDetection) {
+            return $config.EmotionSettings.DefaultEmotion
+        }
+
+        # 自动检测关键词
+        $combinedText = "$UserMessage $ClaudeReply"
+        $mapping = $config.EmotionSettings.AutoMapping
+
+        # 成功/完成
+        if ($combinedText -match '(成功|完成|创建了|生成了|优化|提升|success|complete|created|generated|improved)') {
+            return $mapping.Success
+        }
+
+        # 错误/失败
+        if ($combinedText -match '(错误|失败|问题|bug|异常|error|fail|issue|problem|exception)') {
+            return $mapping.Error
+        }
+
+        # 重要/警告
+        if ($combinedText -match '(重要|注意|警告|关键|严重|important|warning|critical|serious)') {
+            return $mapping.Warning
+        }
+
+        # 询问/建议
+        if ($combinedText -match '(建议|推荐|可以|是否|需要|suggest|recommend|could|should|would you)') {
+            return $mapping.Question
+        }
+
+        # 默认情感
+        return $config.EmotionSettings.DefaultEmotion
+
+    } catch {
+        Write-VoiceError "Failed to load emotion config: $($_.Exception.Message)"
+        return "assistant"
     }
-
-    $combinedText = "$UserMessage $ClaudeReply"
-
-    # 成功/完成 - cheerful
-    if ($combinedText -match '(成功|完成|创建了|生成了|优化|提升|success|complete|created|generated|improved)') {
-        return "cheerful"
-    }
-
-    # 错误/失败 - calm (冷静处理错误)
-    if ($combinedText -match '(错误|失败|问题|bug|异常|error|fail|issue|problem|exception)') {
-        return "calm"
-    }
-
-    # 重要/严肃 - serious
-    if ($combinedText -match '(重要|注意|警告|关键|严重|important|warning|critical|serious)') {
-        return "serious"
-    }
-
-    # 询问/建议 - gentle
-    if ($combinedText -match '(建议|推荐|可以|是否|需要|suggest|recommend|could|should|would you)') {
-        return "gentle"
-    }
-
-    # 默认 - assistant (专业助手)
-    return $defaultEmotion
 }
 
 # ============== 主逻辑 ==============

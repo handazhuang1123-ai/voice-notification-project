@@ -1,0 +1,147 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="语音通知配置" Height="850" Width="600"
+        Background="#F5F5F5" WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="Voice Notification 语音配置"
+                   FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <!-- 语音选择 -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,8">
+            <TextBlock Text="选择语音角色:" FontSize="13" Margin="0,0,0,3" FontWeight="SemiBold"/>
+            <ComboBox Name="VoiceComboBox" Height="30" FontSize="11">
+                <ComboBoxItem Content="zh-CN-XiaoxiaoNeural (女声-温柔)" Tag="zh-CN-XiaoxiaoNeural" IsSelected="True"/>
+                <ComboBoxItem Content="zh-CN-YunxiNeural (男声-自然)" Tag="zh-CN-YunxiNeural"/>
+                <ComboBoxItem Content="zh-CN-XiaoyiNeural (女声-活泼)" Tag="zh-CN-XiaoyiNeural"/>
+                <ComboBoxItem Content="zh-CN-YunyangNeural (男声-新闻)" Tag="zh-CN-YunyangNeural"/>
+                <ComboBoxItem Content="zh-CN-XiaomoNeural (女声-抒情)" Tag="zh-CN-XiaomoNeural"/>
+                <ComboBoxItem Content="zh-CN-XiaohanNeural (女声-甜美)" Tag="zh-CN-XiaohanNeural"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- 情感设置 -->
+        <GroupBox Grid.Row="2" Header="情感设置" Margin="0,0,0,8" Padding="8">
+            <StackPanel>
+                <CheckBox Name="UseAutoDetectionCheckBox" Content="启用自动情感检测" IsChecked="True" Margin="0,0,0,6"/>
+
+                <TextBlock Text="默认情感风格:" FontSize="11" Margin="0,0,0,3"/>
+                <ComboBox Name="DefaultEmotionComboBox" Height="26" FontSize="11" Margin="0,0,0,6">
+                    <ComboBoxItem Content="assistant - 专业助手" Tag="assistant" IsSelected="True"/>
+                    <ComboBoxItem Content="chat - 轻松聊天" Tag="chat"/>
+                    <ComboBoxItem Content="cheerful - 愉快" Tag="cheerful"/>
+                    <ComboBoxItem Content="calm - 平静" Tag="calm"/>
+                    <ComboBoxItem Content="serious - 严肃" Tag="serious"/>
+                    <ComboBoxItem Content="gentle - 温柔" Tag="gentle"/>
+                </ComboBox>
+
+                <TextBlock Text="自动映射规则 (关键词检测时使用):" FontSize="11" Margin="0,6,0,3" FontWeight="SemiBold"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="28"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="成功/完成 →" VerticalAlignment="Center" FontSize="10"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" Name="SuccessEmotionComboBox" Height="24" FontSize="10" Margin="5,0,0,0">
+                        <ComboBoxItem Content="cheerful - 愉快" Tag="cheerful" IsSelected="True"/>
+                        <ComboBoxItem Content="assistant - 专业" Tag="assistant"/>
+                        <ComboBoxItem Content="chat - 轻松" Tag="chat"/>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="错误/失败 →" VerticalAlignment="Center" FontSize="10"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" Name="ErrorEmotionComboBox" Height="24" FontSize="10" Margin="5,0,0,0">
+                        <ComboBoxItem Content="calm - 平静" Tag="calm" IsSelected="True"/>
+                        <ComboBoxItem Content="serious - 严肃" Tag="serious"/>
+                        <ComboBoxItem Content="gentle - 温柔" Tag="gentle"/>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="重要/警告 →" VerticalAlignment="Center" FontSize="10"/>
+                    <ComboBox Grid.Row="2" Grid.Column="1" Name="WarningEmotionComboBox" Height="24" FontSize="10" Margin="5,0,0,0">
+                        <ComboBoxItem Content="serious - 严肃" Tag="serious" IsSelected="True"/>
+                        <ComboBoxItem Content="calm - 平静" Tag="calm"/>
+                        <ComboBoxItem Content="assistant - 专业" Tag="assistant"/>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="建议/询问 →" VerticalAlignment="Center" FontSize="10"/>
+                    <ComboBox Grid.Row="3" Grid.Column="1" Name="QuestionEmotionComboBox" Height="24" FontSize="10" Margin="5,0,0,0">
+                        <ComboBoxItem Content="gentle - 温柔" Tag="gentle" IsSelected="True"/>
+                        <ComboBoxItem Content="chat - 轻松" Tag="chat"/>
+                        <ComboBoxItem Content="assistant - 专业" Tag="assistant"/>
+                    </ComboBox>
+                </Grid>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- 语速调整 -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,5">
+            <TextBlock Name="RateLabel" Text="语速: -8%" FontSize="12" Margin="0,0,0,2" FontWeight="SemiBold"/>
+            <Slider Name="RateSlider" Minimum="-20" Maximum="20" Value="-8"
+                    TickFrequency="5" IsSnapToTickEnabled="True" Height="20"/>
+        </StackPanel>
+
+        <!-- 音调调整 -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,5">
+            <TextBlock Name="PitchLabel" Text="音调: +1st" FontSize="12" Margin="0,0,0,2" FontWeight="SemiBold"/>
+            <Slider Name="PitchSlider" Minimum="-5" Maximum="5" Value="1"
+                    TickFrequency="1" IsSnapToTickEnabled="True" Height="20"/>
+        </StackPanel>
+
+        <!-- 音量调整 -->
+        <StackPanel Grid.Row="5" Margin="0,0,0,5">
+            <TextBlock Name="VolumeLabel" Text="音量: 85%" FontSize="12" Margin="0,0,0,2" FontWeight="SemiBold"/>
+            <Slider Name="VolumeSlider" Minimum="0" Maximum="100" Value="85"
+                    TickFrequency="10" IsSnapToTickEnabled="True" Height="20"/>
+        </StackPanel>
+
+        <!-- 情感强度 -->
+        <StackPanel Grid.Row="6" Margin="0,0,0,5">
+            <TextBlock Name="StyleDegreeLabel" Text="情感强度: 1.2" FontSize="12" Margin="0,0,0,2" FontWeight="SemiBold"/>
+            <Slider Name="StyleDegreeSlider" Minimum="0.5" Maximum="2.0" Value="1.2"
+                    TickFrequency="0.1" IsSnapToTickEnabled="False" Height="20"/>
+        </StackPanel>
+
+        <!-- 预览区域 -->
+        <GroupBox Grid.Row="7" Header="预览测试" Margin="0,5,0,5" Padding="6">
+            <StackPanel>
+                <TextBox Name="PreviewTextBox"
+                         Text="先生，任务已完成。创建了用户手册，包含5个章节。"
+                         TextWrapping="Wrap" Height="45" Margin="0,0,0,6"
+                         FontSize="11"/>
+                <Button Name="PreviewButton" Content="🔊 试听语音"
+                        Height="30" FontSize="12" Background="#4CAF50"
+                        Foreground="White" Cursor="Hand"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- 底部按钮 -->
+        <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+            <Button Name="SaveButton" Content="保存配置"
+                    Width="90" Height="30" Margin="0,0,8,0"
+                    Background="#2196F3" Foreground="White" FontSize="11" Cursor="Hand"/>
+            <Button Name="CancelButton" Content="取消"
+                    Width="90" Height="30"
+                    Background="#9E9E9E" Foreground="White" FontSize="11" Cursor="Hand"/>
+        </StackPanel>
+    </Grid>
+</Window>
