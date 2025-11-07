@@ -1,30 +1,11 @@
- 我需要研究 Claude Code 的 post-tool-use hook 功能，特别是：
-
-       1. PostToolUse hook 如何工作？
-       2. CLAUDE_TOOL_RESULT 环境变量的格式和内容是什么？
-       3. 如何在 PostToolUse hook 中获取被修改/创建的文件路径？
-       4. PostToolUse hook 的输出是否会显示给用户？如果不显示，如何调试？
-       5. 有没有最佳实践或示例代码展示如何编写 PostToolUse hook 脚本？
-
-       请搜索 Claude Code 官方文档、GitHub issues、Reddit 讨论等资源，找到相关信息。
-
-       重点关注：
-       - Claude Code hooks 文档
-       - CLAUDE_TOOL_RESULT 环境变量的具体格式
-       - 如何从工具结果中提取文件路径
-       - hook 脚本的调试方法
-  ⎿  > 我需要研究 Claude Code 的 post-tool-use hook 功能，特别是：
-
-     1. PostToolUse hook 如何工作？
-     2. CLAUDE_TOOL_RESULT 环境变量的格式和内容是什么？
-     3. 如何在 PostToolUse hook 中获取被修改/创建的文件路径？
-     4. PostToolUse hook 的输出是否会显示给用户？如果不显示，如何调试？
-     5. 有没有最佳实践或示例代码展示如何编写 PostToolUse hook 脚本？
-
-     请搜索 Claude Code 官方文档、GitHub issues、Reddit 讨论等资源，找到相关信息。
-
-     重点关注：
-     - Claude Code hooks 文档
-     - CLAUDE_TOOL_RESULT 环境变量的具体格式
-     - 如何从工具结果中提取文件路径
-     - hook 脚本的调试方法
+  H:\HZH\Little-Projects\voice-notification-project\.claude\hooks
+这个文件夹是hook语音提醒的脚本文件，现在我要针对任务的总结输出成果进行优化
+1.现在的总结大概是中文不超过60字符，我认为这个字数作为精确的总结够用了，但我希望语音播报的内容是一个有温度，有情感，
+又不失去专业性的内容，这个尺度的把握需要把把关，极度的精炼可能不能满足我的预期
+2.本地的千问模型我已经很满意了，不希望通过模型再拉效能了，我希望基于现有的“硬件”条件得到精明的解决方案
+3.关于claude回复中及技术噪音我印象中已经筛除了，但是模型对于推荐、建议会理解成已完成，对于询问是否执行会理解成alread
+y done,是一个问题
+4.关于播报的人物、edge-tts语音情感表达设置，什么样的设置能听着自然切有性格特色，而不是简单的加减速造成听起来像劣质的
+电子音处理
+5.如果可以设置人物、性格的语音特色的话，能否做一个简易的操作界面，以及实现的方式
+使用web-research-specialist查询上述问题并将报告写入doc文件夹

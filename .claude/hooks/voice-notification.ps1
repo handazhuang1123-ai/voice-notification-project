@@ -107,7 +107,7 @@ try {
     if (Test-Path $edgeTtsScript) {
         try {
             Write-VoiceDebug "Attempting edge-tts playback..."
-            $voiceResult = & $edgeTtsScript -Text $summary
+            $voiceResult = & $edgeTtsScript -Text $summary -TimeoutSeconds 30
 
             if ($voiceResult.Success) {
                 Write-VoiceInfo "edge-tts playback successful"

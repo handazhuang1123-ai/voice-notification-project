@@ -15,7 +15,7 @@ param(
     [string]$Voice = "zh-CN-XiaoxiaoNeural",
 
     [Parameter(Mandatory = $false)]
-    [int]$TimeoutSeconds = 10
+    [int]$TimeoutSeconds = 30
 )
 
 # ============== 编码配置 ==============
@@ -87,7 +87,7 @@ try {
             $player.controls.play()
 
             # Wait for playback to complete
-            $maxWait = 15
+            $maxWait = 60
             $waited = 0
             while ($player.playState -ne 1 -and $waited -lt $maxWait) {
                 Start-Sleep -Milliseconds 500
