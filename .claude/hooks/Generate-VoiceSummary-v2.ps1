@@ -121,26 +121,22 @@ function Invoke-OllamaAPI {
 
     Write-VoiceDebug "Input processed: User=$($userTruncated.Length) Claude=$($claudeTruncated.Length)"
 
-    # 3. Use verified best prompt template (from research report)
+    # 3. Use simplified Jarvis prompt (verified from 2025-01-07 research report, line 440-458)
     $promptLines = @(
-        "Task: Summarize what AI assistant Claude accomplished",
+        "你是专业AI助手,请用50-80字总结助手刚完成的工作。",
         "",
-        "Input:",
-        "User: $userTruncated",
-        "Claude: $claudeTruncated",
+        "对话内容:",
+        "用户: $userTruncated",
+        "助手: $claudeTruncated",
         "",
-        "Requirements:",
-        "1. Output in Chinese (MUST)",
-        "2. 20-30 characters maximum",
-        "3. Format: [action][result] or Sir, [action][result]",
-        "4. Ignore technical details, only core conclusion",
+        "要求:",
+        "1. 开头用""先生,""",
+        "2. 只描述""已完成""的动作,忽略""建议""、""询问""",
+        "3. 提取最重要的1个数字或结果",
+        "4. 使用完成时态 (已创建、已修复、已优化)",
+        "5. 忽略代码块、工具调用、错误信息",
         "",
-        "Examples:",
-        "- Sir, authentication issue fixed",
-        "- Code optimized, performance improved 50%",
-        "- Document created with 5 chapters",
-        "",
-        "Output Chinese summary directly:"
+        "直接输出总结:"
     )
     $prompt = $promptLines -join "`n"
 
@@ -163,17 +159,18 @@ function Invoke-OllamaAPI {
         Write-VoiceDebug "Cannot detect models, using default: $selectedModel"
     }
 
-    # 5. Optimized API parameters (based on research recommendations)
+    # 5. Optimized API parameters (based on 2025-01-07 research recommendations)
     $body = @{
         model = $selectedModel
         prompt = $prompt
         stream = $false
         options = @{
-            temperature = 0.5
-            top_p = 0.9
-            num_predict = 80
+            temperature = 0.4          # Reduced from 0.5 to 0.4 for more deterministic output
+            top_p = 0.85              # Added: Focus on high-probability tokens
+            top_k = 30                # Added: Limit candidate tokens
+            num_predict = 120         # Increased from 80 to 120 for 50-80 char output
             num_ctx = 8192
-            repeat_penalty = 1.1
+            repeat_penalty = 1.15     # Increased from 1.1 to 1.15 to avoid repetition
         }
     } | ConvertTo-Json -Depth 10
 
@@ -211,10 +208,10 @@ function Invoke-OllamaAPI {
         $summary = $summary -replace '[\"''""]+$', ''
         $summary = $summary.Trim()
 
-        # 9. Length limit
-        if ($summary.Length -gt 60) {
-            $summary = $summary.Substring(0, 60)
-            Write-VoiceDebug "Summary truncated to 60 chars"
+        # 9. Length limit (updated to 80 chars for more expressive summaries)
+        if ($summary.Length -gt 80) {
+            $summary = $summary.Substring(0, 80)
+            Write-VoiceDebug "Summary truncated to 80 chars"
         }
 
         Write-VoiceDebug "Final summary: $summary (Length: $($summary.Length))"

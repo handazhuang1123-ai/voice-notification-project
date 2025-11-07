@@ -90,9 +90,9 @@ try {
         Write-VoiceDebug "Transcript file not found, using default summary"
     }
 
-    # Ensure summary is within character limits (60 for Chinese, 50 for English)
+    # Ensure summary is within character limits (updated to 80 for Chinese, 70 for English)
     $hasChinese = $summary -match '[\u4e00-\u9fa5]'
-    $maxLength = if ($hasChinese) { 60 } else { 50 }
+    $maxLength = if ($hasChinese) { 80 } else { 70 }
     if ($summary.Length -gt $maxLength) {
         $summary = $summary.Substring(0, $maxLength)
         Write-VoiceDebug "Summary truncated to $maxLength chars"
@@ -107,7 +107,7 @@ try {
     if (Test-Path $edgeTtsScript) {
         try {
             Write-VoiceDebug "Attempting edge-tts playback..."
-            $voiceResult = & $edgeTtsScript -Text $summary -TimeoutSeconds 10
+            $voiceResult = & $edgeTtsScript -Text $summary
 
             if ($voiceResult.Success) {
                 Write-VoiceInfo "edge-tts playback successful"
@@ -128,7 +128,7 @@ try {
                 }
 
                 $job = Start-Job -ScriptBlock $jobScript -ArgumentList $summary
-                Wait-Job -Job $job -Timeout 8 | Out-Null
+                Wait-Job -Job $job | Out-Null
                 $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
                 Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
                 Write-VoiceDebug "SAPI fallback result: $result"
@@ -150,7 +150,7 @@ try {
             }
 
             $job = Start-Job -ScriptBlock $jobScript -ArgumentList $summary
-            Wait-Job -Job $job -Timeout 8 | Out-Null
+            Wait-Job -Job $job | Out-Null
             $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
             Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
             Write-VoiceDebug "SAPI fallback result: $result"
@@ -172,7 +172,7 @@ try {
         }
 
         $job = Start-Job -ScriptBlock $jobScript -ArgumentList $summary
-        Wait-Job -Job $job -Timeout 8 | Out-Null
+        Wait-Job -Job $job | Out-Null
         $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
         Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
         Write-VoiceDebug "SAPI result: $result"
