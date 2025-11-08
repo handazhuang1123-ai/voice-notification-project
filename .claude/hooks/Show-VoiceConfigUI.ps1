@@ -41,10 +41,11 @@ function Show-VoiceConfigUI {
     try {
         $xaml = Get-Content $xamlPath -Raw -Encoding UTF8
         $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xaml))
-        $window = [Windows.Markup.XamlReader]::Load($reader)
+        # ✅ 使用 script 作用域避免闭包问题
+        $script:window = [Windows.Markup.XamlReader]::Load($reader)
         $reader.Close()
 
-        if ($null -eq $window) {
+        if ($null -eq $script:window) {
             Write-Error "Failed to load XAML: window is null"
             return
         }
@@ -54,26 +55,33 @@ function Show-VoiceConfigUI {
         return
     }
 
-    # 获取所有控件引用
-    $voiceCombo = $window.FindName("VoiceComboBox")
-    $useAutoDetectionCheckBox = $window.FindName("UseAutoDetectionCheckBox")
-    $defaultEmotionCombo = $window.FindName("DefaultEmotionComboBox")
-    $successEmotionCombo = $window.FindName("SuccessEmotionComboBox")
-    $errorEmotionCombo = $window.FindName("ErrorEmotionComboBox")
-    $warningEmotionCombo = $window.FindName("WarningEmotionComboBox")
-    $questionEmotionCombo = $window.FindName("QuestionEmotionComboBox")
-    $rateSlider = $window.FindName("RateSlider")
-    $pitchSlider = $window.FindName("PitchSlider")
-    $volumeSlider = $window.FindName("VolumeSlider")
-    $styleDegreeSlider = $window.FindName("StyleDegreeSlider")
-    $rateLabel = $window.FindName("RateLabel")
-    $pitchLabel = $window.FindName("PitchLabel")
-    $volumeLabel = $window.FindName("VolumeLabel")
-    $styleDegreeLabel = $window.FindName("StyleDegreeLabel")
-    $previewTextBox = $window.FindName("PreviewTextBox")
-    $previewButton = $window.FindName("PreviewButton")
-    $saveButton = $window.FindName("SaveButton")
-    $cancelButton = $window.FindName("CancelButton")
+    # ✅ 预存所有控件引用到 script 作用域（避免闭包失效问题）
+    $script:voiceCombo = $script:window.FindName("VoiceComboBox")
+    $script:useAutoDetectionCheckBox = $script:window.FindName("UseAutoDetectionCheckBox")
+    $script:defaultEmotionCombo = $script:window.FindName("DefaultEmotionComboBox")
+    $script:successEmotionCombo = $script:window.FindName("SuccessEmotionComboBox")
+    $script:errorEmotionCombo = $script:window.FindName("ErrorEmotionComboBox")
+    $script:warningEmotionCombo = $script:window.FindName("WarningEmotionComboBox")
+    $script:questionEmotionCombo = $script:window.FindName("QuestionEmotionComboBox")
+    $script:robotEffectCombo = $script:window.FindName("RobotEffectComboBox")
+
+    # 验证关键控件是否成功加载
+    if ($null -eq $script:robotEffectCombo) {
+        Write-Warning "RobotEffectComboBox not found in XAML"
+    }
+
+    $script:rateSlider = $script:window.FindName("RateSlider")
+    $script:pitchSlider = $script:window.FindName("PitchSlider")
+    $script:volumeSlider = $script:window.FindName("VolumeSlider")
+    $script:styleDegreeSlider = $script:window.FindName("StyleDegreeSlider")
+    $script:rateLabel = $script:window.FindName("RateLabel")
+    $script:pitchLabel = $script:window.FindName("PitchLabel")
+    $script:volumeLabel = $script:window.FindName("VolumeLabel")
+    $script:styleDegreeLabel = $script:window.FindName("StyleDegreeLabel")
+    $script:previewTextBox = $script:window.FindName("PreviewTextBox")
+    $script:previewButton = $script:window.FindName("PreviewButton")
+    $script:saveButton = $script:window.FindName("SaveButton")
+    $script:cancelButton = $script:window.FindName("CancelButton")
 
     # 配置文件路径
     $configPath = Join-Path $PSScriptRoot "voice-config.json"
@@ -86,6 +94,7 @@ function Show-VoiceConfigUI {
         Volume = 85
         StyleDegree = 1.2
         UseSSML = $true
+        RobotEffect = "None"
         EmotionSettings = @{
             UseAutoDetection = $true
             DefaultEmotion = "assistant"
@@ -107,6 +116,9 @@ function Show-VoiceConfigUI {
             $config.Volume = $savedConfig.Volume
             $config.StyleDegree = $savedConfig.StyleDegree
             $config.UseSSML = $savedConfig.UseSSML
+            if ($null -ne $savedConfig.RobotEffect) {
+                $config.RobotEffect = $savedConfig.RobotEffect
+            }
             $config.EmotionSettings.UseAutoDetection = $savedConfig.EmotionSettings.UseAutoDetection
             $config.EmotionSettings.DefaultEmotion = $savedConfig.EmotionSettings.DefaultEmotion
             $config.EmotionSettings.AutoMapping.Success = $savedConfig.EmotionSettings.AutoMapping.Success
@@ -118,108 +130,195 @@ function Show-VoiceConfigUI {
         }
     }
 
-    # 应用配置到界面
-    foreach ($item in $voiceCombo.Items) {
+    # ✅ 应用配置到界面（使用 script: 作用域）
+    # 语音角色选择
+    $voiceFound = $false
+    foreach ($item in $script:voiceCombo.Items) {
         if ($item.Tag -eq $config.Voice) {
-            $voiceCombo.SelectedItem = $item
+            $script:voiceCombo.SelectedItem = $item
+            $voiceFound = $true
             break
         }
     }
+    if (-not $voiceFound) { $script:voiceCombo.SelectedIndex = 0 }
 
-    $useAutoDetectionCheckBox.IsChecked = $config.EmotionSettings.UseAutoDetection
+    # 情感检测开关
+    $script:useAutoDetectionCheckBox.IsChecked = $config.EmotionSettings.UseAutoDetection
 
-    foreach ($item in $defaultEmotionCombo.Items) {
-        if ($item.Tag -eq $config.EmotionSettings.DefaultEmotion) {
-            $defaultEmotionCombo.SelectedItem = $item
+    # 默认情感风格
+    $defaultEmotionFound = $false
+    foreach ($item in $script:defaultEmotionCombo.Items) {
+        if ($null -ne $item.Tag -and $item.Tag -eq $config.EmotionSettings.DefaultEmotion) {
+            $script:defaultEmotionCombo.SelectedItem = $item
+            $defaultEmotionFound = $true
             break
         }
     }
+    if (-not $defaultEmotionFound) { $script:defaultEmotionCombo.SelectedIndex = 0 }
 
-    foreach ($item in $successEmotionCombo.Items) {
-        if ($item.Tag -eq $config.EmotionSettings.AutoMapping.Success) {
-            $successEmotionCombo.SelectedItem = $item
+    # 成功情感
+    $successEmotionFound = $false
+    foreach ($item in $script:successEmotionCombo.Items) {
+        if ($null -ne $item.Tag -and $item.Tag -eq $config.EmotionSettings.AutoMapping.Success) {
+            $script:successEmotionCombo.SelectedItem = $item
+            $successEmotionFound = $true
             break
         }
     }
+    if (-not $successEmotionFound) { $script:successEmotionCombo.SelectedIndex = 0 }
 
-    foreach ($item in $errorEmotionCombo.Items) {
-        if ($item.Tag -eq $config.EmotionSettings.AutoMapping.Error) {
-            $errorEmotionCombo.SelectedItem = $item
+    # 错误情感
+    $errorEmotionFound = $false
+    foreach ($item in $script:errorEmotionCombo.Items) {
+        if ($null -ne $item.Tag -and $item.Tag -eq $config.EmotionSettings.AutoMapping.Error) {
+            $script:errorEmotionCombo.SelectedItem = $item
+            $errorEmotionFound = $true
             break
         }
     }
+    if (-not $errorEmotionFound) { $script:errorEmotionCombo.SelectedIndex = 0 }
 
-    foreach ($item in $warningEmotionCombo.Items) {
-        if ($item.Tag -eq $config.EmotionSettings.AutoMapping.Warning) {
-            $warningEmotionCombo.SelectedItem = $item
+    # 警告情感
+    $warningEmotionFound = $false
+    foreach ($item in $script:warningEmotionCombo.Items) {
+        if ($null -ne $item.Tag -and $item.Tag -eq $config.EmotionSettings.AutoMapping.Warning) {
+            $script:warningEmotionCombo.SelectedItem = $item
+            $warningEmotionFound = $true
             break
         }
     }
+    if (-not $warningEmotionFound) { $script:warningEmotionCombo.SelectedIndex = 0 }
 
-    foreach ($item in $questionEmotionCombo.Items) {
-        if ($item.Tag -eq $config.EmotionSettings.AutoMapping.Question) {
-            $questionEmotionCombo.SelectedItem = $item
+    # 询问情感
+    $questionEmotionFound = $false
+    foreach ($item in $script:questionEmotionCombo.Items) {
+        if ($null -ne $item.Tag -and $item.Tag -eq $config.EmotionSettings.AutoMapping.Question) {
+            $script:questionEmotionCombo.SelectedItem = $item
+            $questionEmotionFound = $true
             break
         }
     }
+    if (-not $questionEmotionFound) { $script:questionEmotionCombo.SelectedIndex = 0 }
 
-    $rateSlider.Value = $config.Rate
-    $pitchSlider.Value = $config.Pitch
-    $volumeSlider.Value = $config.Volume
-    $styleDegreeSlider.Value = $config.StyleDegree
+    # 机器人音效
+    if ($null -ne $script:robotEffectCombo) {
+        $robotEffectFound = $false
+        foreach ($item in $script:robotEffectCombo.Items) {
+            if ($null -ne $item.Tag -and $item.Tag -eq $config.RobotEffect) {
+                $script:robotEffectCombo.SelectedItem = $item
+                $robotEffectFound = $true
+                break
+            }
+        }
+        if (-not $robotEffectFound) { $script:robotEffectCombo.SelectedIndex = 0 }
+    }
 
-    # 滑块事件
-    $rateSlider.Add_ValueChanged({
-        $value = [math]::Round($rateSlider.Value)
-        $sign = if ($value -ge 0) { "+" } else { "" }
-        $rateLabel.Text = "语速: $sign$value%"
+    # ✅ 滑块事件 - 使用 $this + $script: 模式（社区验证的最佳实践）
+    $script:rateSlider.Add_ValueChanged({
+        try {
+            # $this 自动指向触发事件的滑块，永远不会失效
+            if ($null -eq $this -or $null -eq $script:rateLabel) { return }
+
+            $value = [math]::Round($this.Value)
+            $sign = if ($value -ge 0) { "+" } else { "" }
+            $script:rateLabel.Text = "语速: $sign$value%"
+        } catch {
+            Write-Warning "Rate slider event failed: $_"
+        }
     })
 
-    $pitchSlider.Add_ValueChanged({
-        $value = [math]::Round($pitchSlider.Value)
-        $sign = if ($value -ge 0) { "+" } else { "" }
-        $pitchLabel.Text = "音调: $sign${value}st"
+    $script:pitchSlider.Add_ValueChanged({
+        try {
+            if ($null -eq $this -or $null -eq $script:pitchLabel) { return }
+
+            $value = [math]::Round($this.Value)
+            $sign = if ($value -ge 0) { "+" } else { "" }
+            $script:pitchLabel.Text = "音调: $sign${value}st"
+        } catch {
+            Write-Warning "Pitch slider event failed: $_"
+        }
     })
 
-    $volumeSlider.Add_ValueChanged({
-        $value = [math]::Round($volumeSlider.Value)
-        $volumeLabel.Text = "音量: $value%"
+    $script:volumeSlider.Add_ValueChanged({
+        try {
+            if ($null -eq $this -or $null -eq $script:volumeLabel) { return }
+
+            $value = [math]::Round($this.Value)
+            $script:volumeLabel.Text = "音量: $value%"
+        } catch {
+            Write-Warning "Volume slider event failed: $_"
+        }
     })
 
-    $styleDegreeSlider.Add_ValueChanged({
-        $value = [math]::Round($styleDegreeSlider.Value, 1)
-        $styleDegreeLabel.Text = "情感强度: $value"
+    $script:styleDegreeSlider.Add_ValueChanged({
+        try {
+            if ($null -eq $this -or $null -eq $script:styleDegreeLabel) { return }
+
+            $value = [math]::Round($this.Value, 1)
+            $script:styleDegreeLabel.Text = "情感强度: $value"
+        } catch {
+            Write-Warning "StyleDegree slider event failed: $_"
+        }
     })
+
+    # ✅ 在事件注册后再设置初始值
+    $script:rateSlider.Value = $config.Rate
+    $script:pitchSlider.Value = $config.Pitch
+    $script:volumeSlider.Value = $config.Volume
+    $script:styleDegreeSlider.Value = $config.StyleDegree
+
+    # 手动初始化标签显示（防止事件未触发）
+    try {
+        $rateValue = [math]::Round($config.Rate)
+        $rateSign = if ($rateValue -ge 0) { "+" } else { "" }
+        $script:rateLabel.Text = "语速: $rateSign$rateValue%"
+
+        $pitchValue = [math]::Round($config.Pitch)
+        $pitchSign = if ($pitchValue -ge 0) { "+" } else { "" }
+        $script:pitchLabel.Text = "音调: $pitchSign${pitchValue}st"
+
+        $volumeValue = [math]::Round($config.Volume)
+        $script:volumeLabel.Text = "音量: $volumeValue%"
+
+        $styleDegreeValue = [math]::Round($config.StyleDegree, 1)
+        $script:styleDegreeLabel.Text = "情感强度: $styleDegreeValue"
+    } catch {
+        Write-Warning "Failed to initialize labels: $_"
+    }
 
     # 全局变量：当前播放进程
     $script:currentPlaybackProcess = $null
 
-    # 试听按钮
-    $previewButton.Add_Click({
+    # ✅ 试听按钮（使用 script: 作用域）
+    $script:previewButton.Add_Click({
         # 如果正在播放，点击停止
         if ($script:currentPlaybackProcess -and -not $script:currentPlaybackProcess.HasExited) {
             try {
                 $script:currentPlaybackProcess.Kill()
                 $script:currentPlaybackProcess = $null
-            } catch {}
-            $previewButton.Content = "🔊 试听语音"
+            } catch {
+                # 进程可能已经退出，忽略错误
+                Write-Verbose "Failed to kill playback process: $_"
+            }
+            $script:previewButton.Content = "🔊 试听语音"
             return
         }
 
-        $voice = $voiceCombo.SelectedItem.Tag
-        $useAutoDetection = $useAutoDetectionCheckBox.IsChecked
-        $defaultEmotion = $defaultEmotionCombo.SelectedItem.Tag
-        $successEmotion = $successEmotionCombo.SelectedItem.Tag
-        $errorEmotion = $errorEmotionCombo.SelectedItem.Tag
-        $warningEmotion = $warningEmotionCombo.SelectedItem.Tag
-        $questionEmotion = $questionEmotionCombo.SelectedItem.Tag
-        $rate = [math]::Round($rateSlider.Value)
-        $pitch = [math]::Round($pitchSlider.Value)
-        $volume = [math]::Round($volumeSlider.Value)
-        $styleDegree = [math]::Round($styleDegreeSlider.Value, 1)
-        $text = $previewTextBox.Text
+        # 获取当前选中的值
+        $voice = if ($null -ne $script:voiceCombo.SelectedItem) { $script:voiceCombo.SelectedItem.Tag } else { "zh-CN-XiaoxiaoNeural" }
+        $defaultEmotion = if ($null -ne $script:defaultEmotionCombo.SelectedItem) { $script:defaultEmotionCombo.SelectedItem.Tag } else { "assistant" }
+        $rate = [math]::Round($script:rateSlider.Value)
+        $pitch = [math]::Round($script:pitchSlider.Value)
+        $volume = [math]::Round($script:volumeSlider.Value)
+        $styleDegree = [math]::Round($script:styleDegreeSlider.Value, 1)
+        $text = $script:previewTextBox.Text
 
-        $previewButton.Content = "⏹ 停止播放"
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            [System.Windows.MessageBox]::Show("请输入预览文本", "提示", "OK", "Warning")
+            return
+        }
+
+        $script:previewButton.Content = "⏹ 停止播放"
 
         try {
             $playScript = Join-Path $PSScriptRoot "Play-EdgeTTS.ps1"
@@ -233,13 +332,13 @@ function Show-VoiceConfigUI {
                 StyleDegree = $styleDegree
                 UseSSML = $true
                 EmotionSettings = @{
-                    UseAutoDetection = $useAutoDetection
+                    UseAutoDetection = $script:useAutoDetectionCheckBox.IsChecked
                     DefaultEmotion = $defaultEmotion
                     AutoMapping = @{
-                        Success = $successEmotion
-                        Error = $errorEmotion
-                        Warning = $warningEmotion
-                        Question = $questionEmotion
+                        Success = if ($null -ne $script:successEmotionCombo.SelectedItem) { $script:successEmotionCombo.SelectedItem.Tag } else { "cheerful" }
+                        Error = if ($null -ne $script:errorEmotionCombo.SelectedItem) { $script:errorEmotionCombo.SelectedItem.Tag } else { "calm" }
+                        Warning = if ($null -ne $script:warningEmotionCombo.SelectedItem) { $script:warningEmotionCombo.SelectedItem.Tag } else { "serious" }
+                        Question = if ($null -ne $script:questionEmotionCombo.SelectedItem) { $script:questionEmotionCombo.SelectedItem.Tag } else { "gentle" }
                     }
                 }
             }
@@ -253,10 +352,10 @@ function Show-VoiceConfigUI {
             # 使用临时配置
             Copy-Item $tempConfigPath $configPath -Force
 
-            # 在后台进程中播放
+            # 在后台进程中播放，使用 EmotionStyle 参数传递默认情感
             $psi = New-Object System.Diagnostics.ProcessStartInfo
             $psi.FileName = "powershell"
-            $psi.Arguments = "-ExecutionPolicy Bypass -NoProfile -Command `"& '$playScript' -Text '$text' -Voice '$voice'`""
+            $psi.Arguments = "-ExecutionPolicy Bypass -NoProfile -Command `"& '$playScript' -Text '$text' -Voice '$voice' -EmotionStyle '$defaultEmotion'`""
             $psi.UseShellExecute = $false
             $psi.CreateNoWindow = $true
 
@@ -275,14 +374,14 @@ function Show-VoiceConfigUI {
                     }
 
                     $script:currentPlaybackProcess = $null
-                    $previewButton.Content = "✓ 播放完成"
+                    $script:previewButton.Content = "✓ 播放完成"
 
                     # 1秒后恢复按钮
                     $resetTimer = New-Object System.Windows.Threading.DispatcherTimer
                     $resetTimer.Interval = [TimeSpan]::FromSeconds(1)
                     $resetTimer.Add_Tick({
                         $resetTimer.Stop()
-                        $previewButton.Content = "🔊 试听语音"
+                        $script:previewButton.Content = "🔊 试听语音"
                     })
                     $resetTimer.Start()
                 }
@@ -291,7 +390,7 @@ function Show-VoiceConfigUI {
 
         } catch {
             [System.Windows.MessageBox]::Show("预览失败: $_", "错误", "OK", "Error")
-            $previewButton.Content = "🔊 试听语音"
+            $script:previewButton.Content = "🔊 试听语音"
             # 恢复原配置
             if (Test-Path "$configPath.bak") {
                 Move-Item "$configPath.bak" $configPath -Force -ErrorAction SilentlyContinue
@@ -299,45 +398,69 @@ function Show-VoiceConfigUI {
         }
     })
 
-    # 保存按钮
-    $saveButton.Add_Click({
-        $config.Voice = $voiceCombo.SelectedItem.Tag
-        $config.Rate = [math]::Round($rateSlider.Value)
-        $config.Pitch = [math]::Round($pitchSlider.Value)
-        $config.Volume = [math]::Round($volumeSlider.Value)
-        $config.StyleDegree = [math]::Round($styleDegreeSlider.Value, 1)
-        $config.EmotionSettings.UseAutoDetection = $useAutoDetectionCheckBox.IsChecked
-        $config.EmotionSettings.DefaultEmotion = $defaultEmotionCombo.SelectedItem.Tag
-        $config.EmotionSettings.AutoMapping.Success = $successEmotionCombo.SelectedItem.Tag
-        $config.EmotionSettings.AutoMapping.Error = $errorEmotionCombo.SelectedItem.Tag
-        $config.EmotionSettings.AutoMapping.Warning = $warningEmotionCombo.SelectedItem.Tag
-        $config.EmotionSettings.AutoMapping.Question = $questionEmotionCombo.SelectedItem.Tag
-
+    # ✅ 保存按钮（使用 script: 作用域）
+    $script:saveButton.Add_Click({
         try {
+            # 添加空值检查，防止闪退
+            if ($null -ne $script:voiceCombo.SelectedItem -and $null -ne $script:voiceCombo.SelectedItem.Tag) {
+                $config.Voice = $script:voiceCombo.SelectedItem.Tag
+            }
+
+            $config.Rate = [math]::Round($script:rateSlider.Value)
+            $config.Pitch = [math]::Round($script:pitchSlider.Value)
+            $config.Volume = [math]::Round($script:volumeSlider.Value)
+            $config.StyleDegree = [math]::Round($script:styleDegreeSlider.Value, 1)
+            $config.EmotionSettings.UseAutoDetection = $script:useAutoDetectionCheckBox.IsChecked
+
+            # 安全获取情感设置
+            if ($null -ne $script:defaultEmotionCombo.SelectedItem -and $null -ne $script:defaultEmotionCombo.SelectedItem.Tag) {
+                $config.EmotionSettings.DefaultEmotion = $script:defaultEmotionCombo.SelectedItem.Tag
+            }
+            if ($null -ne $script:successEmotionCombo.SelectedItem -and $null -ne $script:successEmotionCombo.SelectedItem.Tag) {
+                $config.EmotionSettings.AutoMapping.Success = $script:successEmotionCombo.SelectedItem.Tag
+            }
+            if ($null -ne $script:errorEmotionCombo.SelectedItem -and $null -ne $script:errorEmotionCombo.SelectedItem.Tag) {
+                $config.EmotionSettings.AutoMapping.Error = $script:errorEmotionCombo.SelectedItem.Tag
+            }
+            if ($null -ne $script:warningEmotionCombo.SelectedItem -and $null -ne $script:warningEmotionCombo.SelectedItem.Tag) {
+                $config.EmotionSettings.AutoMapping.Warning = $script:warningEmotionCombo.SelectedItem.Tag
+            }
+            if ($null -ne $script:questionEmotionCombo.SelectedItem -and $null -ne $script:questionEmotionCombo.SelectedItem.Tag) {
+                $config.EmotionSettings.AutoMapping.Question = $script:questionEmotionCombo.SelectedItem.Tag
+            }
+
+            # 安全获取机器人音效设置
+            if ($null -ne $script:robotEffectCombo.SelectedItem -and $null -ne $script:robotEffectCombo.SelectedItem.Tag) {
+                $config.RobotEffect = $script:robotEffectCombo.SelectedItem.Tag
+            }
+
             $config | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8
             [System.Windows.MessageBox]::Show("配置已保存！", "成功", "OK", "Information")
-            $window.Close()
+            $script:window.Close()
         } catch {
             [System.Windows.MessageBox]::Show("保存失败: $_", "错误", "OK", "Error")
         }
     })
 
-    # 取消按钮
-    $cancelButton.Add_Click({
-        $window.Close()
+    # ✅ 取消按钮（使用 script: 作用域）
+    $script:cancelButton.Add_Click({
+        $script:window.Close()
     })
 
-    # 窗口关闭事件：清理播放进程
-    $window.Add_Closed({
+    # ✅ 窗口关闭事件：清理播放进程（使用 script: 作用域）
+    $script:window.Add_Closed({
         if ($script:currentPlaybackProcess -and -not $script:currentPlaybackProcess.HasExited) {
             try {
                 $script:currentPlaybackProcess.Kill()
-            } catch {}
+            } catch {
+                # 进程可能已经退出，忽略错误
+                Write-Verbose "Failed to kill playback process on window close: $_"
+            }
         }
     })
 
-    # 显示窗口
-    $null = $window.ShowDialog()
+    # ✅ 显示窗口（使用 script: 作用域）
+    $null = $script:window.ShowDialog()
 }
 
 # 运行界面

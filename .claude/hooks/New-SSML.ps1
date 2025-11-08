@@ -1,13 +1,13 @@
-﻿function New-SSML {
+﻿function ConvertTo-SSML {
     <#
     .SYNOPSIS
-        Generate SSML markup for Edge-TTS with emotion and prosody control
-        生成带有情感和韵律控制的 Edge-TTS SSML 标记
+        Convert text to SSML markup for Edge-TTS with emotion and prosody control
+        将文本转换为带有情感和韵律控制的 Edge-TTS SSML 标记
 
     .DESCRIPTION
-        Creates SSML (Speech Synthesis Markup Language) XML for Microsoft Edge TTS
+        Converts text to SSML (Speech Synthesis Markup Language) XML for Microsoft Edge TTS
         with support for emotion styles, rate, pitch, and volume control.
-        创建用于 Microsoft Edge TTS 的 SSML XML，支持情感风格、语速、音调和音量控制。
+        将文本转换为用于 Microsoft Edge TTS 的 SSML XML，支持情感风格、语速、音调和音量控制。
 
     .PARAMETER Text
         The text to be converted to speech
@@ -38,11 +38,11 @@
         音量级别（例如："85%"、"+6dB"，默认："85%"）
 
     .EXAMPLE
-        New-SSML -Text "先生,任务已完成" -Style "assistant"
+        ConvertTo-SSML -Text "先生,任务已完成" -Style "assistant"
         生成专业助手风格的 SSML
 
     .EXAMPLE
-        New-SSML -Text "Task completed, sir" -Voice "en-US-GuyNeural" -Style "calm"
+        ConvertTo-SSML -Text "Task completed, sir" -Voice "en-US-GuyNeural" -Style "calm"
         生成英文冷静风格的 SSML
 
     .NOTES

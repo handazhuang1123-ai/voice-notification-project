@@ -329,7 +329,7 @@ try {
     Write-VoiceDebug "Temp file: $tempPath"
 
     # 根据是否指定情感风格决定使用 SSML 还是纯文本模式
-    if ($EmotionStyle -and (Get-Command New-SSML -ErrorAction SilentlyContinue)) {
+    if ($EmotionStyle -and (Get-Command ConvertTo-SSML -ErrorAction SilentlyContinue)) {
         Write-VoiceInfo "Using SSML mode with emotion style: $EmotionStyle"
 
         # 读取配置文件（如果存在）
@@ -355,7 +355,7 @@ try {
         }
 
         # 生成 SSML
-        $ssml = New-SSML -Text $Text `
+        $ssml = ConvertTo-SSML -Text $Text `
             -Voice $Voice `
             -Style $EmotionStyle `
             -StyleDegree $config.StyleDegree `
@@ -387,7 +387,7 @@ try {
     # 清理临时文件
     Start-Sleep -Milliseconds 500
     Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
-    Write-VoiceDebug "Temp file cleaned up"
+    Write-VoiceDebug "Temp files cleaned up"
 
     Write-VoiceInfo "=== Edge-TTS Playback Completed ==="
     return $playResult

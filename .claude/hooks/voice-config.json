@@ -7,12 +7,12 @@
                                                 "Question":  "gentle",
                                                 "Success":  "cheerful"
                                             },
-                            "DefaultEmotion":  "assistant"
+                            "DefaultEmotion":  "serious"
                         },
     "Rate":  -8,
     "UseSSML":  true,
-    "Volume":  85,
+    "Volume":  30,
     "StyleDegree":  1.2,
-    "Voice":  "zh-CN-XiaoxiaoNeural",
+    "Voice":  "zh-CN-YunxiNeural",
     "Pitch":  1
 }

@@ -27,8 +27,28 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 # ============== 导入模块 ==============
 Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
 
-function Remove-TechnicalNoise {
-    param([string]$Text)
+function Get-FilteredText {
+    <#
+    .SYNOPSIS
+        Filter technical noise from text
+        过滤文本中的技术噪音
+
+    .PARAMETER Text
+        Input text to filter
+        要过滤的输入文本
+
+    .OUTPUTS
+        Filtered text string
+        过滤后的文本字符串
+
+    .NOTES
+        Author: 壮爸
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text
+    )
 
     Write-VoiceDebug "Starting intelligent noise filtering..."
 
@@ -103,7 +123,7 @@ function Invoke-OllamaAPI {
     Write-VoiceDebug "=== Ollama API call started ==="
 
     # 1. Smart filtering of technical noise
-    $claudeFiltered = Remove-TechnicalNoise -Text $ClaudeMsg
+    $claudeFiltered = Get-FilteredText -Text $ClaudeMsg
 
     # 2. Smart truncation (keep more content)
     $userTruncated = if ($UserMsg.Length -gt 800) {
@@ -131,10 +151,11 @@ function Invoke-OllamaAPI {
         "",
         "要求:",
         "1. 开头用""先生,""",
-        "2. 只描述""已完成""的动作,忽略""建议""、""询问""",
+        "2. 只描述""已完成""的动作,忽略""建议""、""询问""、""需要我帮你...吗""等未执行的内容",
         "3. 提取最重要的1个数字或结果",
         "4. 使用完成时态 (已创建、已修复、已优化)",
         "5. 忽略代码块、工具调用、错误信息",
+        "6. 如果助手只是询问或建议但未实际执行,应总结为""已提供方案建议""而非""已完成集成""",
         "",
         "直接输出总结:"
     )
