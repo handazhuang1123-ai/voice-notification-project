@@ -26,6 +26,9 @@ if (-not $global:VoiceModulesLoaded) {
     # 加载音频播放模块
     Import-Module (Join-Path $PSScriptRoot '..\modules\Invoke-PlayAudio.psm1') -Force
 
+    # 加载错误监控模块
+    Import-Module (Join-Path $PSScriptRoot '..\modules\ErrorMonitor.psm1') -Force
+
     # 设置全局标记
     $global:VoiceModulesLoaded = $true
     $global:VoiceModulesLoadTime = Get-Date
@@ -122,6 +125,11 @@ function Get-EmotionStyle {
 try {
     Write-VoiceInfo "=== Voice Notification Started ==="
 
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "Other"
+    }
+
     # Read stdin
     $inputLines = @()
     while ($null -ne ($line = [Console]::ReadLine())) {
@@ -173,15 +181,27 @@ try {
                             }
                         } catch {
                             Write-VoiceError "Generate-VoiceSummary failed: $($_.Exception.Message)"
+                            if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+                                Record-Error -Component "AI" -ErrorType $_.Exception.GetType().Name `
+                                    -ErrorMessage $_.Exception.Message -ScriptName "voice-notification.ps1"
+                            }
                         }
                     } else {
                         Write-VoiceError "Generate-VoiceSummary.ps1 not found"
                     }
                 } else {
                     Write-VoiceWarning "Message extraction failed: $($messages.Error)"
+                    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+                        Record-Error -Component "Extract" -ErrorType "Message extraction failed" `
+                            -ErrorMessage $messages.Error -ScriptName "voice-notification.ps1"
+                    }
                 }
             } catch {
                 Write-VoiceError "Extract-Messages failed: $($_.Exception.Message)"
+                if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+                    Record-Error -Component "Extract" -ErrorType $_.Exception.GetType().Name `
+                        -ErrorMessage $_.Exception.Message -ScriptName "voice-notification.ps1"
+                }
             }
         } else {
             Write-VoiceError "Extract-Messages.ps1 not found"
@@ -220,6 +240,10 @@ try {
                 Write-VoiceInfo "edge-tts playback successful"
             } else {
                 Write-VoiceWarning "edge-tts failed: $($voiceResult.Error), falling back to SAPI"
+                if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+                    Record-Error -Component "TTS" -ErrorType "edge-tts playback failed" `
+                        -ErrorMessage $voiceResult.Error -ScriptName "voice-notification.ps1"
+                }
                 # Fallback to SAPI
                 $jobScript = {
                     param($text)

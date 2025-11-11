@@ -33,8 +33,17 @@ try {
     Write-VoiceInfo "=== Extract Messages Started ==="
     Write-VoiceDebug "Transcript path: $TranscriptPath"
 
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "Extract"
+    }
+
     if (!(Test-Path $TranscriptPath)) {
         Write-VoiceError "Transcript file not found"
+        if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+            Record-Error -Component "Extract" -ErrorType "文件不存在" `
+                -ErrorMessage "Transcript file not found: $TranscriptPath" -ScriptName "Extract-Messages.ps1"
+        }
         return @{ UserMessage = ""; ClaudeReply = ""; Success = $false; Error = "File not found" }
     }
 
@@ -175,5 +184,9 @@ try {
 }
 catch {
     Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
+    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+        Record-Error -Component "Extract" -ErrorType $_.Exception.GetType().Name `
+            -ErrorMessage $_.Exception.Message -ScriptName "Extract-Messages.ps1"
+    }
     return @{ UserMessage = ""; ClaudeReply = ""; Success = $false; Error = $_.Exception.Message }
 }

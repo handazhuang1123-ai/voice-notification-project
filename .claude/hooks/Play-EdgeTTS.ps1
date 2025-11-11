@@ -306,10 +306,19 @@ try {
     Write-VoiceDebug "Voice: $Voice"
     Write-VoiceDebug "Emotion Style: $EmotionStyle"
 
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "TTS"
+    }
+
     # 获取 edge-tts 命令路径
     $edgeTtsCmd = Get-EdgeTTSCommand
     if ([string]::IsNullOrEmpty($edgeTtsCmd)) {
         Write-VoiceError "edge-tts command not found"
+        if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+            Record-Error -Component "TTS" -ErrorType "服务未启动" `
+                -ErrorMessage "edge-tts command not found" -ScriptName "Play-EdgeTTS.ps1"
+        }
         return @{ Success = $false; Error = "edge-tts not installed" }
     }
     Write-VoiceDebug "Using edge-tts: $edgeTtsCmd"
@@ -384,5 +393,9 @@ try {
 
 } catch {
     Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
+    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+        Record-Error -Component "TTS" -ErrorType $_.Exception.GetType().Name `
+            -ErrorMessage $_.Exception.Message -ScriptName "Play-EdgeTTS.ps1"
+    }
     return @{ Success = $false; Error = $_.Exception.Message }
 }

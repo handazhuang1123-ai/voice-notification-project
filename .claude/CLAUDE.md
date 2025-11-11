@@ -16,7 +16,25 @@ PowerShell 语音通知工具，使用 Ollama AI 生成个性化通知文本，�
 - **格式化**: 4空格缩进，OTBS风格，UTF-8 BOM，CRLF换行
 - **文档**: 所有导出函数必须有完整的 Comment-Based Help
 
-> **严格参考**: `.editorconfig` 定义了编码格式规则，`.gitattributes` 规范了换行符处理
+### 编码格式规则（.editorconfig）
+
+**PowerShell 文件 (*.ps1, *.psm1, *.psd1)**：
+- **字符编码**: UTF-8 BOM (`charset = utf-8-bom`)
+- **缩进方式**: 空格 (`indent_style = space`)
+- **缩进大小**: 4 空格 (`indent_size = 4`)
+- **换行符**: CRLF (`end_of_line = crlf`)
+- **文件末尾**: 插入空行 (`insert_final_newline = true`)
+- **尾随空格**: 删除 (`trim_trailing_whitespace = true`)
+
+**其他文件格式**：
+- **Markdown (*.md)**: UTF-8, 2空格, LF, 保留尾随空格
+- **JSON (*.json)**: UTF-8, 2空格, LF
+- **YAML (*.yml, *.yaml)**: UTF-8, 2空格, LF
+- **XML (*.xml, *.csproj)**: UTF-8, 2空格
+- **Batch (*.cmd, *.bat)**: UTF-8, CRLF
+- **Shell (*.sh)**: UTF-8, 2空格, LF
+
+> **严格参考**: `.editorconfig` 定义了所有文件类型的编码格式规则，`.gitattributes` 规范了换行符处理
 
 ### Comment-Based Help 模板（双语版本）
 ```powershell
@@ -58,7 +76,7 @@ function Verb-Noun {
 5. **代码格式化**：缩进、空格、括号位置等
 
 **自动执行机制**：
-- ✅ **Git Pre-commit Hook 已配置**
+- ✅ **Git Pre-commit Hook 已配置**（`.git/hooks/pre-commit` 和 `.git/hooks/pre-commit.ps1`）
 - 每次 `git commit` 时自动运行 PSScriptAnalyzer
 - **Error 级别问题会阻止提交**
 - **Warning 级别问题会显示警告但允许提交**

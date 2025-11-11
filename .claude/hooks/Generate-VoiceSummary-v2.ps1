@@ -164,7 +164,7 @@ function Invoke-OllamaAPI {
         "3. 提取最重要的1个数字或结果",
         "4. 使用完成时态 (已创建、已修复、已优化)",
         "5. 忽略代码块、工具调用、错误信息",
-        "6. 如果助手只是询问或建议但未实际执行,应总结为""已提供方案建议""而非""已完成集成""",
+        "6. 如果助手只是询问或建议但未实际执行,应总结为""已提供方案建议""而非""已完成""",
         "",
         "直接输出总结:"
     )
@@ -174,20 +174,29 @@ function Invoke-OllamaAPI {
     $availableModels = @("qwen2.5:7b-instruct", "qwen2.5:7b", "qwen2.5:1.5b", "deepseek-r1:14b")
     $selectedModel = "qwen2.5:7b-instruct"
 
+    Write-VoiceInfo "[模型选择] 开始检测可用模型..."
+    Write-VoiceDebug "[模型选择] 优先级列表: $($availableModels -join ', ')"
+
     try {
         $modelsResponse = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method GET -TimeoutSec 2
         $installedModels = $modelsResponse.models | ForEach-Object { $_.name }
 
+        Write-VoiceInfo "[模型选择] 检测到已安装模型: $($installedModels -join ', ')"
+
         foreach ($model in $availableModels) {
             if ($installedModels -contains $model) {
                 $selectedModel = $model
-                Write-VoiceDebug "Selected model: $selectedModel"
+                Write-VoiceInfo "[模型选择] ✅ 选中模型: $selectedModel"
                 break
+            }
+            else {
+                Write-VoiceDebug "[模型选择] 模型 $model 未安装"
             }
         }
     }
     catch {
-        Write-VoiceDebug "Cannot detect models, using default: $selectedModel"
+        Write-VoiceWarning "[模型选择] 无法检测已安装模型，使用默认: $selectedModel"
+        Write-VoiceDebug "[模型选择] 错误详情: $($_.Exception.Message)"
     }
 
     # 5. Optimized API parameters (based on 2025-01-07 research recommendations)
@@ -205,11 +214,18 @@ function Invoke-OllamaAPI {
         }
     } | ConvertTo-Json -Depth 10
 
+    Write-VoiceInfo "[API调用] 准备发送请求到 Ollama API"
+    Write-VoiceInfo "[API调用] 使用模型: $selectedModel"
+    Write-VoiceDebug "[API调用] 请求参数: temperature=$($body | ConvertFrom-Json).options.temperature, top_p=$($body | ConvertFrom-Json).options.top_p"
+    Write-VoiceDebug "[API调用] Prompt长度: $($prompt.Length) 字符"
+
     # 6. Send request (correct UTF-8 handling)
     try {
         $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 
-        Write-VoiceDebug "Sending request to Ollama..."
+        Write-VoiceInfo "[API调用] 正在调用 Ollama API..."
+        $startTime = Get-Date
+
         $webResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/generate" `
             -Method POST `
             -Body $bodyBytes `
@@ -217,12 +233,22 @@ function Invoke-OllamaAPI {
             -TimeoutSec $TimeoutSeconds `
             -UseBasicParsing
 
+        $elapsedTime = (Get-Date) - $startTime
+        Write-VoiceInfo "[API调用] API响应成功，耗时: $($elapsedTime.TotalSeconds.ToString('F2')) 秒"
+
         # 7. Parse response
         $responseText = $webResponse.Content
         $response = $responseText | ConvertFrom-Json
+
+        # 记录响应中的模型信息
+        if ($response.model) {
+            Write-VoiceInfo "[API响应] 实际使用的模型: $($response.model)"
+        }
+
         $summary = $response.response.Trim()
 
-        Write-VoiceDebug "Raw response length: $($summary.Length)"
+        Write-VoiceInfo "[API响应] 原始响应长度: $($summary.Length) 字符"
+        Write-VoiceDebug "[API响应] 原始内容: $summary"
 
         # 8. Clean output
         # Remove thinking tags (deepseek-r1)
@@ -242,22 +268,25 @@ function Invoke-OllamaAPI {
         # 9. Length limit (updated to 80 chars for more expressive summaries)
         if ($summary.Length -gt 80) {
             $summary = $summary.Substring(0, 80)
-            Write-VoiceDebug "Summary truncated to 80 chars"
+            Write-VoiceInfo "[后处理] 总结已截断至80字符"
         }
 
-        Write-VoiceDebug "Final summary: $summary (Length: $($summary.Length))"
+        Write-VoiceInfo "[最终输出] 总结内容: $summary"
+        Write-VoiceInfo "[最终输出] 字符长度: $($summary.Length)"
 
         # Validate output
         if ([string]::IsNullOrWhiteSpace($summary) -or $summary.Length -lt 3) {
-            Write-VoiceDebug "Summary invalid (too short or empty)"
+            Write-VoiceWarning "[验证失败] 总结无效（太短或空）"
             return $null
         }
 
+        Write-VoiceInfo "[API调用] ✅ 总结生成成功"
         return $summary
 
     }
     catch {
-        Write-VoiceDebug "ERROR: $($_.Exception.Message)"
+        Write-VoiceError "[API调用] ❌ 调用失败: $($_.Exception.Message)"
+        Write-VoiceDebug "[API调用] 详细错误: $_"
         return $null
     }
 }
@@ -267,6 +296,11 @@ try {
     Write-VoiceInfo "=== Starting voice summary generation ==="
     Write-VoiceDebug "User message length: $($UserMessage.Length)"
     Write-VoiceDebug "Claude reply length: $($ClaudeReply.Length)"
+
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "AI"
+    }
 
     # Try Ollama
     $aiSummary = Invoke-OllamaAPI -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
@@ -285,5 +319,9 @@ try {
 }
 catch {
     Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
+    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+        Record-Error -Component "AI" -ErrorType $_.Exception.GetType().Name `
+            -ErrorMessage $_.Exception.Message -ScriptName "Generate-VoiceSummary-v2.ps1"
+    }
     return "Task completed"
 }
