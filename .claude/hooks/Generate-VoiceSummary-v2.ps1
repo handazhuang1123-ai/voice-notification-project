@@ -24,8 +24,15 @@ $ErrorActionPreference = "SilentlyContinue"
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ============== 导入模块 ==============
-Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+# ============== 模块加载（方案B优化） ==============
+# 检查是否已由主脚本加载，避免重复导入
+if (-not $global:VoiceModulesLoaded) {
+    # 独立运行时才加载
+    Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+}
+else {
+    Write-Verbose "[Generate-VoiceSummary] 使用已加载的模块" -Verbose
+}
 
 function Get-FilteredText {
     <#

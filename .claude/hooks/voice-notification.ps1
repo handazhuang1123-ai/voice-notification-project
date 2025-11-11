@@ -15,8 +15,26 @@ $ErrorActionPreference = "SilentlyContinue"
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ============== 导入模块 ==============
-Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+# ============== 统一模块加载（方案B优化） ==============
+# 主脚本负责加载所有模块，子脚本通过检查全局变量避免重复加载
+if (-not $global:VoiceModulesLoaded) {
+    Write-Verbose "[主脚本] 开始加载模块..." -Verbose
+
+    # 加载Logger模块
+    Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+
+    # 加载音频播放模块
+    Import-Module (Join-Path $PSScriptRoot '..\modules\Invoke-PlayAudio.psm1') -Force
+
+    # 设置全局标记
+    $global:VoiceModulesLoaded = $true
+    $global:VoiceModulesLoadTime = Get-Date
+
+    Write-Verbose "[主脚本] 模块加载完成" -Verbose
+}
+else {
+    Write-Verbose "[主脚本] 检测到模块已加载，跳过" -Verbose
+}
 
 # ============== 情感检测函数 ==============
 function Get-EmotionStyle {
