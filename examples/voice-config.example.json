@@ -1,0 +1,68 @@
+{
+  "Voice": "zh-CN-XiaoxiaoNeural",
+  "EmotionStyle": "assistant",
+  "Rate": -8,
+  "Pitch": 1,
+  "Volume": 100,
+  "UseNodeEdgeTTS": false,
+  "Presets": {
+    "jarvis": {
+      "description": "Jarvis 人格 - 专业助手",
+      "Voice": "zh-CN-YunxiNeural",
+      "EmotionStyle": "assistant",
+      "Rate": -8,
+      "Pitch": 1,
+      "Volume": 85
+    },
+    "friendly": {
+      "description": "友好轻松 - 日常通知",
+      "Voice": "zh-CN-XiaoxiaoNeural",
+      "EmotionStyle": "chat",
+      "Rate": -5,
+      "Pitch": 0,
+      "Volume": 80
+    },
+    "serious": {
+      "description": "严肃正式 - 错误提示",
+      "Voice": "zh-CN-YunyangNeural",
+      "EmotionStyle": "serious",
+      "Rate": -12,
+      "Pitch": -1,
+      "Volume": 90
+    },
+    "cheerful": {
+      "description": "愉快积极 - 成功完成",
+      "Voice": "zh-CN-XiaoxiaoNeural",
+      "EmotionStyle": "cheerful",
+      "Rate": -5,
+      "Pitch": 2,
+      "Volume": 95
+    },
+    "calm": {
+      "description": "平静舒缓 - 长时间任务",
+      "Voice": "zh-CN-XiaomoNeural",
+      "EmotionStyle": "calm",
+      "Rate": -10,
+      "Pitch": -1,
+      "Volume": 75
+    }
+  },
+  "PromptTemplate": "Jarvis",
+  "OllamaModel": "qwen2.5:1.5b",
+  "OllamaParameters": {
+    "temperature": 0.4,
+    "top_p": 0.85,
+    "top_k": 30,
+    "repeat_penalty": 1.15,
+    "num_ctx": 4096
+  },
+  "VoiceCache": {
+    "enabled": true,
+    "maxCacheSize": 50,
+    "cachePath": "%TEMP%\\voice-cache"
+  },
+  "Fallback": {
+    "useSAPIIfEdgeTTSFails": true,
+    "useTemplateIfOllamaFails": true
+  }
+}

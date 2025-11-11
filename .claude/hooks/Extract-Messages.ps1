@@ -1,30 +1,50 @@
-# Message Extraction Module
-# Extracts last user message and Claude's reply from transcript
+﻿# ==============================================================================
+# Script: Extract-Messages.ps1
+# Purpose: 消息提取模块 - 从 transcript 提取用户和 Claude 的消息
+# Author: 壮爸
+# Refactored: 2025-01-06
+# ==============================================================================
+
+#Requires -Version 5.1
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$TranscriptPath
 )
 
+# ============== 编码配置 ==============
 $ErrorActionPreference = "SilentlyContinue"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
-function Write-ModuleLog {
-    param($message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logPath = Join-Path (Split-Path $PSScriptRoot) "hooks\extract-messages.log"
-    $logEntry = "$timestamp | $message`n"
-    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::AppendAllText($logPath, $logEntry, $utf8NoBom)
+# ============== 模块加载（方案B优化） ==============
+# 检查是否已由主脚本加载，避免重复导入
+if (-not $global:VoiceModulesLoaded) {
+    # 独立运行时才加载
+    Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+}
+else {
+    Write-Verbose "[Extract-Messages] 使用已加载的模块" -Verbose
 }
 
+# ============== 主逻辑 ==============
 try {
-    Write-ModuleLog "=== Extract Messages Started ==="
-    Write-ModuleLog "Transcript path: $TranscriptPath"
+    Write-VoiceInfo "=== Extract Messages Started ==="
+    Write-VoiceDebug "Transcript path: $TranscriptPath"
+
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "Extract"
+    }
 
     if (!(Test-Path $TranscriptPath)) {
-        Write-ModuleLog "ERROR: Transcript file not found"
-        return @{ UserMessage = ""; ClaudeReply = ""; Success = $false }
+        Write-VoiceError "Transcript file not found"
+        if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+            Record-Error -Component "Extract" -ErrorType "文件不存在" `
+                -ErrorMessage "Transcript file not found: $TranscriptPath" -ScriptName "Extract-Messages.ps1"
+        }
+        return @{ UserMessage = ""; ClaudeReply = ""; Success = $false; Error = "File not found" }
     }
 
     # Wait for transcript to be fully written with retry logic
@@ -36,18 +56,18 @@ try {
         $lines = Get-Content $TranscriptPath -Encoding UTF8 -ErrorAction SilentlyContinue
         $currentLineCount = $lines.Count
 
-        Write-ModuleLog "Retry $($i + 1): Line count = $currentLineCount"
+        Write-VoiceDebug "Retry $($i + 1): Line count = $currentLineCount"
 
         # If line count hasn't changed, transcript is stable
         if ($currentLineCount -eq $lastLineCount -and $i -gt 0) {
-            Write-ModuleLog "Transcript stable, proceeding"
+            Write-VoiceDebug "Transcript stable, proceeding"
             break
         }
 
         $lastLineCount = $currentLineCount
     }
 
-    Write-ModuleLog "Total lines: $($lines.Count)"
+    Write-VoiceDebug "Total lines: $($lines.Count)"
 
     $lastUser = ""
     $lastClaude = ""
@@ -87,7 +107,7 @@ try {
                             if ($item.type -eq "text" -and $item.text) {
                                 $lastClaude = $item.text
                                 $claudeIdx = $i
-                                Write-ModuleLog "Found Claude reply at line $i"
+                                Write-VoiceDebug "Found Claude reply at line $i"
                                 break
                             }
                         }
@@ -96,7 +116,7 @@ try {
                     elseif ($content -is [String]) {
                         $lastClaude = $content
                         $claudeIdx = $i
-                        Write-ModuleLog "Found Claude reply at line $i (string)"
+                        Write-VoiceDebug "Found Claude reply at line $i (string)"
                     }
                 }
             }
@@ -123,7 +143,7 @@ try {
                         foreach ($item in $content) {
                             if ($item.type -eq "text" -and $item.text) {
                                 $lastUser = $item.text
-                                Write-ModuleLog "Found user message at line $i"
+                                Write-VoiceDebug "Found user message at line $i"
                                 break
                             }
                         }
@@ -131,35 +151,42 @@ try {
                     # Handle string content
                     elseif ($content -is [String]) {
                         $lastUser = $content
-                        Write-ModuleLog "Found user message at line $i (string)"
+                        Write-VoiceDebug "Found user message at line $i (string)"
                     }
                 }
             }
 
             # Stop when both found
             if (![string]::IsNullOrEmpty($lastUser) -and ![string]::IsNullOrEmpty($lastClaude)) {
-                Write-ModuleLog "Both messages found, stopping search"
+                Write-VoiceDebug "Both messages found, stopping search"
                 break
             }
-        } catch {
-            Write-ModuleLog "Error parsing line ${i}: $($_.Exception.Message)"
+        }
+        catch {
+            Write-VoiceWarning "Error parsing line ${i}: $($_.Exception.Message)"
             continue
         }
     }
 
-    Write-ModuleLog "User message length: $($lastUser.Length)"
-    Write-ModuleLog "Claude reply length: $($lastClaude.Length)"
+    Write-VoiceDebug "User message length: $($lastUser.Length)"
+    Write-VoiceDebug "Claude reply length: $($lastClaude.Length)"
 
     $result = @{
         UserMessage = $lastUser
         ClaudeReply = $lastClaude
         Success = (![string]::IsNullOrEmpty($lastUser))
+        Error = if (![string]::IsNullOrEmpty($lastUser)) { $null } else { "No messages found" }
     }
 
-    Write-ModuleLog "=== Extract Messages Completed ==="
+    Write-VoiceInfo "=== Extract Messages Completed ==="
     return $result
 
-} catch {
-    Write-ModuleLog "FATAL ERROR: $($_.Exception.Message)"
-    return @{ UserMessage = ""; ClaudeReply = ""; Success = $false }
+}
+catch {
+    Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
+    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+        Record-Error -Component "Extract" -ErrorType $_.Exception.GetType().Name `
+            -ErrorMessage $_.Exception.Message -ScriptName "Extract-Messages.ps1"
+    }
+    return @{ UserMessage = ""; ClaudeReply = ""; Success = $false; Error = $_.Exception.Message }
 }

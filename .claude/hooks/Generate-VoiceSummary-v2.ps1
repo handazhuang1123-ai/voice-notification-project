@@ -1,34 +1,63 @@
-# AI Voice Summary Generation Module v4 - Best Practice Based
-# Uses qwen2.5:7b-instruct + Smart Content Filtering + Optimized Prompt
+﻿# ==============================================================================
+# Script: Generate-VoiceSummary-v2.ps1
+# Purpose: AI 语音总结生成模块 - 使用 Ollama 生成总结
+# Author: 壮爸
+# Refactored: 2025-01-06
+# ==============================================================================
+
+#Requires -Version 5.1
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$UserMessage,
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]$ClaudeReply = "",
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [int]$TimeoutSeconds = 10
 )
 
+# ============== 编码配置 ==============
 $ErrorActionPreference = "SilentlyContinue"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-function Write-ModuleLog {
-    param($message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logPath = Join-Path (Split-Path $PSScriptRoot) "hooks\ai-summary-v2.log"
-    $logEntry = "$timestamp | $message`n"
-    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::AppendAllText($logPath, $logEntry, $utf8NoBom)
+# ============== 模块加载（方案B优化） ==============
+# 检查是否已由主脚本加载，避免重复导入
+if (-not $global:VoiceModulesLoaded) {
+    # 独立运行时才加载
+    Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+}
+else {
+    Write-Verbose "[Generate-VoiceSummary] 使用已加载的模块" -Verbose
 }
 
-function Remove-TechnicalNoise {
-    param([string]$Text)
+function Get-FilteredText {
+    <#
+    .SYNOPSIS
+        Filter technical noise from text
+        过滤文本中的技术噪音
 
-    Write-ModuleLog "Starting intelligent noise filtering..."
+    .PARAMETER Text
+        Input text to filter
+        要过滤的输入文本
+
+    .OUTPUTS
+        Filtered text string
+        过滤后的文本字符串
+
+    .NOTES
+        Author: 壮爸
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text
+    )
+
+    Write-VoiceDebug "Starting intelligent noise filtering..."
 
     # 1. Remove tool_use blocks
     $filtered = $Text -replace '(?s)<tool_use>.*?</tool_use>', '[FILTERED]'
@@ -51,7 +80,7 @@ function Remove-TechnicalNoise {
     $filteredLength = $filtered.Length
     $reduction = [math]::Round(($originalLength - $filteredLength) / $originalLength * 100, 1)
 
-    Write-ModuleLog "Filtering complete: $originalLength -> $filteredLength chars (reduced $reduction%)"
+    Write-VoiceDebug "Filtering complete: $originalLength -> $filteredLength chars (reduced $reduction%)"
 
     return $filtered
 }
@@ -59,7 +88,7 @@ function Remove-TechnicalNoise {
 function Get-EnhancedFallback {
     param($UserMsg, $ClaudeMsg)
 
-    Write-ModuleLog "Using enhanced fallback template"
+    Write-VoiceDebug "Using enhanced fallback template"
 
     $userLower = $UserMsg.ToLower()
     $claudeLower = $ClaudeMsg.ToLower()
@@ -98,47 +127,46 @@ function Get-EnhancedFallback {
 function Invoke-OllamaAPI {
     param($UserMsg, $ClaudeMsg)
 
-    Write-ModuleLog "=== Ollama API call started ==="
+    Write-VoiceDebug "=== Ollama API call started ==="
 
     # 1. Smart filtering of technical noise
-    $claudeFiltered = Remove-TechnicalNoise -Text $ClaudeMsg
+    $claudeFiltered = Get-FilteredText -Text $ClaudeMsg
 
     # 2. Smart truncation (keep more content)
     $userTruncated = if ($UserMsg.Length -gt 800) {
         $UserMsg.Substring(0, 400) + " ... " + $UserMsg.Substring($UserMsg.Length - 400, 400)
-    } else {
+    }
+    else {
         $UserMsg
     }
 
     $claudeTruncated = if ($claudeFiltered.Length -gt 1500) {
         # Prioritize conclusion part
         $claudeFiltered.Substring(0, 500) + " ... " + $claudeFiltered.Substring($claudeFiltered.Length - 1000, 1000)
-    } else {
+    }
+    else {
         $claudeFiltered
     }
 
-    Write-ModuleLog "Input processed: User=$($userTruncated.Length) Claude=$($claudeTruncated.Length)"
+    Write-VoiceDebug "Input processed: User=$($userTruncated.Length) Claude=$($claudeTruncated.Length)"
 
-    # 3. Use verified best prompt template (from research report)
+    # 3. Use simplified Jarvis prompt (verified from 2025-01-07 research report, line 440-458)
     $promptLines = @(
-        "Task: Summarize what AI assistant Claude accomplished",
+        "你是专业AI助手,请用50-80字总结助手刚完成的工作。",
         "",
-        "Input:",
-        "User: $userTruncated",
-        "Claude: $claudeTruncated",
+        "对话内容:",
+        "用户: $userTruncated",
+        "助手: $claudeTruncated",
         "",
-        "Requirements:",
-        "1. Output in Chinese (MUST)",
-        "2. 20-30 characters maximum",
-        "3. Format: [action][result] or Sir, [action][result]",
-        "4. Ignore technical details, only core conclusion",
+        "要求:",
+        "1. 开头用""先生,""",
+        "2. 只描述""已完成""的动作,忽略""建议""、""询问""、""需要我帮你...吗""等未执行的内容",
+        "3. 提取最重要的1个数字或结果",
+        "4. 使用完成时态 (已创建、已修复、已优化)",
+        "5. 忽略代码块、工具调用、错误信息",
+        "6. 如果助手只是询问或建议但未实际执行,应总结为""已提供方案建议""而非""已完成""",
         "",
-        "Examples:",
-        "- Sir, authentication issue fixed",
-        "- Code optimized, performance improved 50%",
-        "- Document created with 5 chapters",
-        "",
-        "Output Chinese summary directly:"
+        "直接输出总结:"
     )
     $prompt = $promptLines -join "`n"
 
@@ -146,40 +174,58 @@ function Invoke-OllamaAPI {
     $availableModels = @("qwen2.5:7b-instruct", "qwen2.5:7b", "qwen2.5:1.5b", "deepseek-r1:14b")
     $selectedModel = "qwen2.5:7b-instruct"
 
+    Write-VoiceInfo "[模型选择] 开始检测可用模型..."
+    Write-VoiceDebug "[模型选择] 优先级列表: $($availableModels -join ', ')"
+
     try {
         $modelsResponse = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method GET -TimeoutSec 2
         $installedModels = $modelsResponse.models | ForEach-Object { $_.name }
 
+        Write-VoiceInfo "[模型选择] 检测到已安装模型: $($installedModels -join ', ')"
+
         foreach ($model in $availableModels) {
             if ($installedModels -contains $model) {
                 $selectedModel = $model
-                Write-ModuleLog "Selected model: $selectedModel"
+                Write-VoiceInfo "[模型选择] ✅ 选中模型: $selectedModel"
                 break
             }
+            else {
+                Write-VoiceDebug "[模型选择] 模型 $model 未安装"
+            }
         }
-    } catch {
-        Write-ModuleLog "Cannot detect models, using default: $selectedModel"
+    }
+    catch {
+        Write-VoiceWarning "[模型选择] 无法检测已安装模型，使用默认: $selectedModel"
+        Write-VoiceDebug "[模型选择] 错误详情: $($_.Exception.Message)"
     }
 
-    # 5. Optimized API parameters (based on research recommendations)
+    # 5. Optimized API parameters (based on 2025-01-07 research recommendations)
     $body = @{
         model = $selectedModel
         prompt = $prompt
         stream = $false
         options = @{
-            temperature = 0.5
-            top_p = 0.9
-            num_predict = 80
+            temperature = 0.4          # Reduced from 0.5 to 0.4 for more deterministic output
+            top_p = 0.85              # Added: Focus on high-probability tokens
+            top_k = 30                # Added: Limit candidate tokens
+            num_predict = 120         # Increased from 80 to 120 for 50-80 char output
             num_ctx = 8192
-            repeat_penalty = 1.1
+            repeat_penalty = 1.15     # Increased from 1.1 to 1.15 to avoid repetition
         }
     } | ConvertTo-Json -Depth 10
+
+    Write-VoiceInfo "[API调用] 准备发送请求到 Ollama API"
+    Write-VoiceInfo "[API调用] 使用模型: $selectedModel"
+    Write-VoiceDebug "[API调用] 请求参数: temperature=$($body | ConvertFrom-Json).options.temperature, top_p=$($body | ConvertFrom-Json).options.top_p"
+    Write-VoiceDebug "[API调用] Prompt长度: $($prompt.Length) 字符"
 
     # 6. Send request (correct UTF-8 handling)
     try {
         $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 
-        Write-ModuleLog "Sending request to Ollama..."
+        Write-VoiceInfo "[API调用] 正在调用 Ollama API..."
+        $startTime = Get-Date
+
         $webResponse = Invoke-WebRequest -Uri "http://localhost:11434/api/generate" `
             -Method POST `
             -Body $bodyBytes `
@@ -187,12 +233,22 @@ function Invoke-OllamaAPI {
             -TimeoutSec $TimeoutSeconds `
             -UseBasicParsing
 
+        $elapsedTime = (Get-Date) - $startTime
+        Write-VoiceInfo "[API调用] API响应成功，耗时: $($elapsedTime.TotalSeconds.ToString('F2')) 秒"
+
         # 7. Parse response
         $responseText = $webResponse.Content
         $response = $responseText | ConvertFrom-Json
+
+        # 记录响应中的模型信息
+        if ($response.model) {
+            Write-VoiceInfo "[API响应] 实际使用的模型: $($response.model)"
+        }
+
         $summary = $response.response.Trim()
 
-        Write-ModuleLog "Raw response length: $($summary.Length)"
+        Write-VoiceInfo "[API响应] 原始响应长度: $($summary.Length) 字符"
+        Write-VoiceDebug "[API响应] 原始内容: $summary"
 
         # 8. Clean output
         # Remove thinking tags (deepseek-r1)
@@ -209,48 +265,63 @@ function Invoke-OllamaAPI {
         $summary = $summary -replace '[\"''""]+$', ''
         $summary = $summary.Trim()
 
-        # 9. Length limit
-        if ($summary.Length -gt 60) {
-            $summary = $summary.Substring(0, 60)
-            Write-ModuleLog "Summary truncated to 60 chars"
+        # 9. Length limit (updated to 80 chars for more expressive summaries)
+        if ($summary.Length -gt 80) {
+            $summary = $summary.Substring(0, 80)
+            Write-VoiceInfo "[后处理] 总结已截断至80字符"
         }
 
-        Write-ModuleLog "Final summary: $summary (Length: $($summary.Length))"
+        Write-VoiceInfo "[最终输出] 总结内容: $summary"
+        Write-VoiceInfo "[最终输出] 字符长度: $($summary.Length)"
 
         # Validate output
         if ([string]::IsNullOrWhiteSpace($summary) -or $summary.Length -lt 3) {
-            Write-ModuleLog "Summary invalid (too short or empty)"
+            Write-VoiceWarning "[验证失败] 总结无效（太短或空）"
             return $null
         }
 
+        Write-VoiceInfo "[API调用] ✅ 总结生成成功"
         return $summary
 
-    } catch {
-        Write-ModuleLog "ERROR: $($_.Exception.Message)"
+    }
+    catch {
+        Write-VoiceError "[API调用] ❌ 调用失败: $($_.Exception.Message)"
+        Write-VoiceDebug "[API调用] 详细错误: $_"
         return $null
     }
 }
 
 # ===== Main Flow =====
 try {
-    Write-ModuleLog "=== Starting voice summary generation ==="
-    Write-ModuleLog "User message length: $($UserMessage.Length)"
-    Write-ModuleLog "Claude reply length: $($ClaudeReply.Length)"
+    Write-VoiceInfo "=== Starting voice summary generation ==="
+    Write-VoiceDebug "User message length: $($UserMessage.Length)"
+    Write-VoiceDebug "Claude reply length: $($ClaudeReply.Length)"
+
+    # 记录调用
+    if (Get-Command Record-Call -ErrorAction SilentlyContinue) {
+        Record-Call -Component "AI"
+    }
 
     # Try Ollama
     $aiSummary = Invoke-OllamaAPI -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
 
     if (![string]::IsNullOrWhiteSpace($aiSummary)) {
-        Write-ModuleLog "=== AI summary success ==="
+        Write-VoiceInfo "=== AI summary success ==="
         return $aiSummary
-    } else {
+    }
+    else {
         # Fallback
         $fallbackSummary = Get-EnhancedFallback -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
-        Write-ModuleLog "=== Using fallback: $fallbackSummary ==="
+        Write-VoiceWarning "=== Using fallback: $fallbackSummary ==="
         return $fallbackSummary
     }
 
-} catch {
-    Write-ModuleLog "FATAL ERROR: $($_.Exception.Message)"
+}
+catch {
+    Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
+    if (Get-Command Record-Error -ErrorAction SilentlyContinue) {
+        Record-Error -Component "AI" -ErrorType $_.Exception.GetType().Name `
+            -ErrorMessage $_.Exception.Message -ScriptName "Generate-VoiceSummary-v2.ps1"
+    }
     return "Task completed"
 }

@@ -128,3 +128,9 @@ audio_cache/
 *.wav
 *.mp3
 notification_history/
+n.temp/
+.temp/
+
+# Personal research reports
+# 个人研究报告
+docs/SCS论文核心故事线分析报告_*.md
