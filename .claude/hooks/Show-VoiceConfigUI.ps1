@@ -63,12 +63,6 @@ function Show-VoiceConfigUI {
     $script:errorEmotionCombo = $script:window.FindName("ErrorEmotionComboBox")
     $script:warningEmotionCombo = $script:window.FindName("WarningEmotionComboBox")
     $script:questionEmotionCombo = $script:window.FindName("QuestionEmotionComboBox")
-    $script:robotEffectCombo = $script:window.FindName("RobotEffectComboBox")
-
-    # 验证关键控件是否成功加载
-    if ($null -eq $script:robotEffectCombo) {
-        Write-Warning "RobotEffectComboBox not found in XAML"
-    }
 
     $script:rateSlider = $script:window.FindName("RateSlider")
     $script:pitchSlider = $script:window.FindName("PitchSlider")
@@ -94,7 +88,6 @@ function Show-VoiceConfigUI {
         Volume = 85
         StyleDegree = 1.2
         UseSSML = $true
-        RobotEffect = "None"
         EmotionSettings = @{
             UseAutoDetection = $true
             DefaultEmotion = "assistant"
@@ -116,9 +109,6 @@ function Show-VoiceConfigUI {
             $config.Volume = $savedConfig.Volume
             $config.StyleDegree = $savedConfig.StyleDegree
             $config.UseSSML = $savedConfig.UseSSML
-            if ($null -ne $savedConfig.RobotEffect) {
-                $config.RobotEffect = $savedConfig.RobotEffect
-            }
             $config.EmotionSettings.UseAutoDetection = $savedConfig.EmotionSettings.UseAutoDetection
             $config.EmotionSettings.DefaultEmotion = $savedConfig.EmotionSettings.DefaultEmotion
             $config.EmotionSettings.AutoMapping.Success = $savedConfig.EmotionSettings.AutoMapping.Success
@@ -200,19 +190,6 @@ function Show-VoiceConfigUI {
     }
     if (-not $questionEmotionFound) { $script:questionEmotionCombo.SelectedIndex = 0 }
 
-    # 机器人音效
-    if ($null -ne $script:robotEffectCombo) {
-        $robotEffectFound = $false
-        foreach ($item in $script:robotEffectCombo.Items) {
-            if ($null -ne $item.Tag -and $item.Tag -eq $config.RobotEffect) {
-                $script:robotEffectCombo.SelectedItem = $item
-                $robotEffectFound = $true
-                break
-            }
-        }
-        if (-not $robotEffectFound) { $script:robotEffectCombo.SelectedIndex = 0 }
-    }
-
     # ✅ 滑块事件 - 使用 $this + $script: 模式（社区验证的最佳实践）
     $script:rateSlider.Add_ValueChanged({
         try {
@@ -222,7 +199,8 @@ function Show-VoiceConfigUI {
             $value = [math]::Round($this.Value)
             $sign = if ($value -ge 0) { "+" } else { "" }
             $script:rateLabel.Text = "语速: $sign$value%"
-        } catch {
+        }
+        catch {
             Write-Warning "Rate slider event failed: $_"
         }
     })
@@ -234,7 +212,8 @@ function Show-VoiceConfigUI {
             $value = [math]::Round($this.Value)
             $sign = if ($value -ge 0) { "+" } else { "" }
             $script:pitchLabel.Text = "音调: $sign${value}st"
-        } catch {
+        }
+        catch {
             Write-Warning "Pitch slider event failed: $_"
         }
     })
@@ -245,7 +224,8 @@ function Show-VoiceConfigUI {
 
             $value = [math]::Round($this.Value)
             $script:volumeLabel.Text = "音量: $value%"
-        } catch {
+        }
+        catch {
             Write-Warning "Volume slider event failed: $_"
         }
     })
@@ -256,7 +236,8 @@ function Show-VoiceConfigUI {
 
             $value = [math]::Round($this.Value, 1)
             $script:styleDegreeLabel.Text = "情感强度: $value"
-        } catch {
+        }
+        catch {
             Write-Warning "StyleDegree slider event failed: $_"
         }
     })
@@ -296,7 +277,8 @@ function Show-VoiceConfigUI {
             try {
                 $script:currentPlaybackProcess.Kill()
                 $script:currentPlaybackProcess = $null
-            } catch {
+            }
+            catch {
                 # 进程可能已经退出，忽略错误
                 Write-Verbose "Failed to kill playback process: $_"
             }
@@ -427,11 +409,6 @@ function Show-VoiceConfigUI {
             }
             if ($null -ne $script:questionEmotionCombo.SelectedItem -and $null -ne $script:questionEmotionCombo.SelectedItem.Tag) {
                 $config.EmotionSettings.AutoMapping.Question = $script:questionEmotionCombo.SelectedItem.Tag
-            }
-
-            # 安全获取机器人音效设置
-            if ($null -ne $script:robotEffectCombo.SelectedItem -and $null -ne $script:robotEffectCombo.SelectedItem.Tag) {
-                $config.RobotEffect = $script:robotEffectCombo.SelectedItem.Tag
             }
 
             $config | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8

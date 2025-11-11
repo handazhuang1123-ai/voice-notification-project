@@ -29,6 +29,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ============== 导入模块 ==============
 Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\modules\Invoke-PlayAudio.psm1') -Force
 
 # 导入 SSML 生成模块
 $ssmlModulePath = Join-Path $PSScriptRoot 'New-SSML.ps1'
@@ -61,7 +62,8 @@ function Get-EdgeTTSCommand {
     try {
         $cmd = Get-Command edge-tts -ErrorAction Stop
         return $cmd.Source
-    } catch {
+    }
+    catch {
         return ""
     }
 }
@@ -143,10 +145,12 @@ function Invoke-EdgeTTSWithSSML {
 
         return @{ Success = $true }
 
-    } catch {
+    }
+    catch {
         Write-VoiceError "Exception in SSML processing: $($_.Exception.Message)"
         return @{ Success = $false; Error = $_.Exception.Message }
-    } finally {
+    }
+    finally {
         # 清理 SSML 文件
         Remove-Item $ssmlFilePath -Force -ErrorAction SilentlyContinue
     }
@@ -245,8 +249,8 @@ function Invoke-EdgeTTSPlainText {
 function Invoke-AudioPlayback {
     <#
     .SYNOPSIS
-        Play audio file using Windows Media Player
-        使用 Windows Media Player 播放音频文件
+        Play audio file using best available method (wrapper)
+        使用最佳可用方法播放音频文件（包装器）
 
     .PARAMETER AudioPath
         Path to audio file
@@ -269,43 +273,22 @@ function Invoke-AudioPlayback {
         [int]$TimeoutSeconds = 30
     )
 
-    Write-VoiceDebug "Starting playback..."
-    $jobScript = {
-        param($audioPath)
-        try {
-            $player = New-Object -ComObject WMPlayer.OCX
-            $player.settings.volume = 100
-            $player.URL = $audioPath
-            $player.controls.play()
+    Write-VoiceDebug "Starting playback using Invoke-PlayAudio..."
 
-            # 等待播放完成
-            $maxWait = 60
-            $waited = 0
-            while ($player.playState -ne 1 -and $waited -lt $maxWait) {
-                Start-Sleep -Milliseconds 500
-                $waited += 0.5
-            }
+    try {
+        # 使用通用播放模块
+        $playResult = Invoke-PlayAudio -AudioPath $AudioPath -Volume 100 -TimeoutSeconds $TimeoutSeconds
 
-            $player.controls.stop()
-            $player.close()
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($player) | Out-Null
-            return "SUCCESS"
-        } catch {
-            return "ERROR: $($_.Exception.Message)"
+        if ($playResult.Success) {
+            Write-VoiceDebug "Playback successful using $($playResult.Method)"
+            return @{ Success = $true; Result = "SUCCESS - $($playResult.Method)" }
+        } else {
+            Write-VoiceError "Playback failed: $($playResult.Error)"
+            return @{ Success = $false; Error = $playResult.Error }
         }
-    }
-
-    $job = Start-Job -ScriptBlock $jobScript -ArgumentList $AudioPath
-    Wait-Job -Job $job -Timeout $TimeoutSeconds | Out-Null
-    $result = Receive-Job -Job $job -ErrorAction SilentlyContinue
-    Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-
-    Write-VoiceDebug "Playback result: $result"
-
-    if ($result -like "SUCCESS") {
-        return @{ Success = $true; Result = $result }
-    } else {
-        return @{ Success = $false; Error = $result }
+    } catch {
+        Write-VoiceError "Exception in playback: $($_.Exception.Message)"
+        return @{ Success = $false; Error = $_.Exception.Message }
     }
 }
 

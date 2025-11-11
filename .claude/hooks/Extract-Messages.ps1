@@ -145,7 +145,8 @@ try {
                 Write-VoiceDebug "Both messages found, stopping search"
                 break
             }
-        } catch {
+        }
+        catch {
             Write-VoiceWarning "Error parsing line ${i}: $($_.Exception.Message)"
             continue
         }
@@ -164,7 +165,8 @@ try {
     Write-VoiceInfo "=== Extract Messages Completed ==="
     return $result
 
-} catch {
+}
+catch {
     Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
     return @{ UserMessage = ""; ClaudeReply = ""; Success = $false; Error = $_.Exception.Message }
 }

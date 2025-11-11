@@ -128,14 +128,16 @@ function Invoke-OllamaAPI {
     # 2. Smart truncation (keep more content)
     $userTruncated = if ($UserMsg.Length -gt 800) {
         $UserMsg.Substring(0, 400) + " ... " + $UserMsg.Substring($UserMsg.Length - 400, 400)
-    } else {
+    }
+    else {
         $UserMsg
     }
 
     $claudeTruncated = if ($claudeFiltered.Length -gt 1500) {
         # Prioritize conclusion part
         $claudeFiltered.Substring(0, 500) + " ... " + $claudeFiltered.Substring($claudeFiltered.Length - 1000, 1000)
-    } else {
+    }
+    else {
         $claudeFiltered
     }
 
@@ -176,7 +178,8 @@ function Invoke-OllamaAPI {
                 break
             }
         }
-    } catch {
+    }
+    catch {
         Write-VoiceDebug "Cannot detect models, using default: $selectedModel"
     }
 
@@ -245,7 +248,8 @@ function Invoke-OllamaAPI {
 
         return $summary
 
-    } catch {
+    }
+    catch {
         Write-VoiceDebug "ERROR: $($_.Exception.Message)"
         return $null
     }
@@ -263,14 +267,16 @@ try {
     if (![string]::IsNullOrWhiteSpace($aiSummary)) {
         Write-VoiceInfo "=== AI summary success ==="
         return $aiSummary
-    } else {
+    }
+    else {
         # Fallback
         $fallbackSummary = Get-EnhancedFallback -UserMsg $UserMessage -ClaudeMsg $ClaudeReply
         Write-VoiceWarning "=== Using fallback: $fallbackSummary ==="
         return $fallbackSummary
     }
 
-} catch {
+}
+catch {
     Write-VoiceError "FATAL ERROR: $($_.Exception.Message)"
     return "Task completed"
 }
