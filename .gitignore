@@ -96,6 +96,12 @@ obj/
 *.exe
 *.nupkg
 
+# NuGet packages
+# NuGet 包
+packages/
+*.nuget.props
+*.nuget.targets
+
 # Documentation generation
 # 文档生成
 docs/_site/
