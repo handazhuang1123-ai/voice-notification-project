@@ -227,14 +227,32 @@ try {
         Write-VoiceInfo "Detected emotion style: $emotionStyle"
     }
 
+    # Module 3.5: Load voice configuration
+    $configPath = Join-Path $PSScriptRoot "voice-config.json"
+    $voiceName = "zh-CN-XiaoxiaoNeural"  # 默认女声
+
+    if (Test-Path $configPath) {
+        try {
+            $voiceConfig = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($voiceConfig.Voice) {
+                $voiceName = $voiceConfig.Voice
+                Write-VoiceDebug "Loaded voice from config: $voiceName"
+            }
+        } catch {
+            Write-VoiceWarning "Failed to load voice config, using default: $_"
+        }
+    } else {
+        Write-VoiceWarning "Config file not found, using default voice"
+    }
+
     # Module 4: Voice Playback with edge-tts (fallback to SAPI)
     $edgeTtsScript = Join-Path $PSScriptRoot "Play-EdgeTTS.ps1"
     $voiceResult = $null
 
     if (Test-Path $edgeTtsScript) {
         try {
-            Write-VoiceDebug "Attempting edge-tts playback with emotion style..."
-            $voiceResult = & $edgeTtsScript -Text $summary -EmotionStyle $emotionStyle -TimeoutSeconds 30
+            Write-VoiceDebug "Attempting edge-tts playback with voice: $voiceName, emotion: $emotionStyle"
+            $voiceResult = & $edgeTtsScript -Text $summary -Voice $voiceName -EmotionStyle $emotionStyle -TimeoutSeconds 30
 
             if ($voiceResult.Success) {
                 Write-VoiceInfo "edge-tts playback successful"

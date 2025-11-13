@@ -347,7 +347,14 @@ try {
                 $config.Pitch = if ($savedConfig.Pitch -lt 0) { "$($savedConfig.Pitch)st" } else { "+$($savedConfig.Pitch)st" }
                 $config.Volume = "$($savedConfig.Volume)%"
                 $config.StyleDegree = [double]$savedConfig.StyleDegree
-                Write-VoiceDebug "Loaded config: Rate=$($config.Rate), Pitch=$($config.Pitch), Volume=$($config.Volume)"
+
+                # 如果未通过参数指定 Voice（使用默认值），则从配置文件读取
+                if ($Voice -eq "zh-CN-XiaoxiaoNeural" -and $savedConfig.Voice) {
+                    $Voice = $savedConfig.Voice
+                    Write-VoiceDebug "Using voice from config: $Voice"
+                }
+
+                Write-VoiceDebug "Loaded config: Voice=$Voice, Rate=$($config.Rate), Pitch=$($config.Pitch), Volume=$($config.Volume)"
             } catch {
                 Write-VoiceWarning "Failed to load config, using defaults: $_"
             }
