@@ -131,6 +131,12 @@ notification_history/
 n.temp/
 .temp/
 
+# Runtime data and temporary files
+# 运行时数据和临时文件
+project_files.json
+.claude/data/error-stats.json
+.claude/hooks/voice-config.json
+
 # Personal research reports
 # 个人研究报告
 docs/SCS论文核心故事线分析报告_*.md
