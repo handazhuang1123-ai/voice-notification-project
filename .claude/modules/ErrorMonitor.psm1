@@ -27,6 +27,58 @@ $script:ErrorCache = @{
     Timeline = @()
 }
 
+# ============== 辅助函数 ==============
+function ConvertTo-Hashtable {
+    <#
+    .SYNOPSIS
+        Convert PSCustomObject to Hashtable recursively (PowerShell 5.1 compatible)
+        递归转换 PSCustomObject 到 Hashtable（PowerShell 5.1 兼容）
+
+    .PARAMETER InputObject
+        Object to convert
+        要转换的对象
+
+    .OUTPUTS
+        Hashtable or original type
+        哈希表或原始类型
+
+    .NOTES
+        Author: 壮爸
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [object]$InputObject
+    )
+
+    process {
+        if ($null -eq $InputObject) {
+            return $null
+        }
+
+        # Handle arrays
+        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+            $collection = @()
+            foreach ($item in $InputObject) {
+                $collection += ConvertTo-Hashtable -InputObject $item
+            }
+            return $collection
+        }
+
+        # Handle PSCustomObject
+        if ($InputObject -is [PSCustomObject]) {
+            $hash = @{}
+            foreach ($property in $InputObject.PSObject.Properties) {
+                $hash[$property.Name] = ConvertTo-Hashtable -InputObject $property.Value
+            }
+            return $hash
+        }
+
+        # Return primitive types as-is
+        return $InputObject
+    }
+}
+
 # ============== 初始化函数 ==============
 function Initialize-ErrorMonitor {
     <#
@@ -54,11 +106,12 @@ function Initialize-ErrorMonitor {
     if (Test-Path $script:ErrorDataPath) {
         try {
             $jsonContent = Get-Content $script:ErrorDataPath -Raw -Encoding UTF8
-            $script:ErrorCache = $jsonContent | ConvertFrom-Json -AsHashtable
+            $jsonObject = $jsonContent | ConvertFrom-Json
+            $script:ErrorCache = ConvertTo-Hashtable -InputObject $jsonObject
             Write-Verbose "[ErrorMonitor] 已加载错误统计数据"
         }
         catch {
-            Write-Warning "[ErrorMonitor] 无法加载错误数据，使用默认值"
+            Write-Warning "[ErrorMonitor] 无法加载错误数据，使用默认值: $($_.Exception.Message)"
         }
     }
     else {
@@ -88,13 +141,12 @@ function Record-Call {
         [string]$Component
     )
 
-    $script:ErrorCache.Summary.TotalCalls++
+    # 使用明确赋值避免自增问题
+    $script:ErrorCache.Summary.TotalCalls = $script:ErrorCache.Summary.TotalCalls + 1
     $script:ErrorCache.Summary.LastUpdate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-    # 每10次调用保存一次
-    if ($script:ErrorCache.Summary.TotalCalls % 10 -eq 0) {
-        Save-ErrorData
-    }
+    # 立即保存数据（确保实时性）
+    Save-ErrorData
 }
 
 function Record-Error {
@@ -245,10 +297,11 @@ function Get-ErrorStatistics {
     if (Test-Path $script:ErrorDataPath) {
         try {
             $jsonContent = Get-Content $script:ErrorDataPath -Raw -Encoding UTF8
-            $script:ErrorCache = $jsonContent | ConvertFrom-Json -AsHashtable
+            $jsonObject = $jsonContent | ConvertFrom-Json
+            $script:ErrorCache = ConvertTo-Hashtable -InputObject $jsonObject
         }
         catch {
-            Write-Warning "[ErrorMonitor] 读取错误数据失败"
+            Write-Warning "[ErrorMonitor] 读取错误数据失败: $($_.Exception.Message)"
         }
     }
 

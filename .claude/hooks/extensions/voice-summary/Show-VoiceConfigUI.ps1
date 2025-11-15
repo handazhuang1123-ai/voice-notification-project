@@ -303,7 +303,7 @@ function Show-VoiceConfigUI {
         $script:previewButton.Content = "⏹ 停止播放"
 
         try {
-            $playScript = Join-Path $PSScriptRoot "Play-EdgeTTS.ps1"
+            $playScript = Join-Path $PSScriptRoot "helpers\Play-EdgeTTS.ps1"
 
             # 临时修改配置文件进行预览
             $tempConfig = @{

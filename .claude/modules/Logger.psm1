@@ -66,7 +66,7 @@ function Write-VoiceLog
         [string]$Source = (Get-PSCallStack)[1].Command,
 
         [Parameter(Mandatory = $false)]
-        [string]$LogPath = (Join-Path $PSScriptRoot '..\..\logs\voice-unified.log')
+        [string]$LogPath = (Join-Path $PSScriptRoot '..\hooks\extensions\voice-summary\logs\voice-unified.log')
     )
 
     # 确保日志目录存在

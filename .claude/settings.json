@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File \"H:\\HZH\\Little-Projects\\voice-notification-project\\.claude\\hooks\\voice-notification.ps1\""
+            "command": "powershell -ExecutionPolicy Bypass -File \"H:\\HZH\\Little-Projects\\voice-notification-project\\.claude\\hooks\\dispatcher.ps1\""
           }
         ]
       }

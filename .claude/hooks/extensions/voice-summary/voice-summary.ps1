@@ -21,13 +21,13 @@ if (-not $global:VoiceModulesLoaded) {
     Write-Verbose "[主脚本] 开始加载模块..." -Verbose
 
     # 加载Logger模块
-    Import-Module (Join-Path $PSScriptRoot '..\modules\Logger.psm1') -Force
+    Import-Module (Join-Path $PSScriptRoot '..\..\..\modules\Logger.psm1') -Force -Scope Global
 
     # 加载音频播放模块
-    Import-Module (Join-Path $PSScriptRoot '..\modules\Invoke-PlayAudio.psm1') -Force
+    Import-Module (Join-Path $PSScriptRoot '..\..\..\modules\Invoke-PlayAudio.psm1') -Force -Scope Global
 
     # 加载错误监控模块
-    Import-Module (Join-Path $PSScriptRoot '..\modules\ErrorMonitor.psm1') -Force
+    Import-Module (Join-Path $PSScriptRoot '..\..\..\modules\ErrorMonitor.psm1') -Force -Scope Global
 
     # 设置全局标记
     $global:VoiceModulesLoaded = $true
@@ -68,7 +68,7 @@ function Get-EmotionStyle {
     )
 
     # 加载配置
-    $configPath = Join-Path $PSScriptRoot "voice-config.json"
+    $configPath = Join-Path $PSScriptRoot "config.json"
 
     if (!(Test-Path $configPath)) {
         Write-VoiceWarning "Config file not found, using default emotion"
@@ -130,12 +130,8 @@ try {
         Record-Call -Component "Other"
     }
 
-    # Read stdin
-    $inputLines = @()
-    while ($null -ne ($line = [Console]::ReadLine())) {
-        $inputLines += $line
-    }
-    $inputData = $inputLines -join "`n"
+    # Read stdin (兼容管道输入和标准输入)
+    $inputData = @($input) -join "`n"
 
     if ([string]::IsNullOrWhiteSpace($inputData)) {
         Write-VoiceDebug "Empty input"
@@ -154,7 +150,7 @@ try {
         Write-VoiceInfo "Transcript file exists, processing..."
 
         # Module 1: Extract Messages
-        $extractScript = Join-Path $PSScriptRoot "Extract-Messages.ps1"
+        $extractScript = Join-Path $PSScriptRoot "helpers\Extract-Messages.ps1"
         if (Test-Path $extractScript) {
             try {
                 $messages = & $extractScript -TranscriptPath $transcriptPath
@@ -168,7 +164,7 @@ try {
                     Write-VoiceDebug "Claude reply: $($claudeMsg.Substring(0, [Math]::Min(100, $claudeMsg.Length)))"
 
                     # Module 2: Generate AI Summary
-                    $summaryScript = Join-Path $PSScriptRoot "Generate-VoiceSummary-v2.ps1"
+                    $summaryScript = Join-Path $PSScriptRoot "helpers\Generate-Summary.ps1"
                     if (Test-Path $summaryScript) {
                         try {
                             $aiSummary = & $summaryScript -UserMessage $userMsg -ClaudeReply $claudeMsg -TimeoutSeconds 10
@@ -246,7 +242,7 @@ try {
     }
 
     # Module 4: Voice Playback with edge-tts (fallback to SAPI)
-    $edgeTtsScript = Join-Path $PSScriptRoot "Play-EdgeTTS.ps1"
+    $edgeTtsScript = Join-Path $PSScriptRoot "helpers\Play-EdgeTTS.ps1"
     $voiceResult = $null
 
     if (Test-Path $edgeTtsScript) {

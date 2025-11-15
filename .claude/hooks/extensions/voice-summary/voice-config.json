@@ -1,0 +1,18 @@
+﻿{
+    "StyleDegree":  1.2,
+    "Volume":  85,
+    "EmotionSettings":  {
+                            "UseAutoDetection":  true,
+                            "AutoMapping":  {
+                                                "Error":  "calm",
+                                                "Warning":  "serious",
+                                                "Question":  "gentle",
+                                                "Success":  "cheerful"
+                                            },
+                            "DefaultEmotion":  "assistant"
+                        },
+    "Pitch":  1,
+    "Voice":  "zh-CN-YunyangNeural",
+    "UseSSML":  true,
+    "Rate":  -8
+}
