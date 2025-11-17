@@ -1,0 +1,48 @@
+{
+  "name": "pip-boy-theme",
+  "version": "1.0.0",
+  "description": "Fallout-inspired retro CRT terminal theme for web applications",
+  "main": "js/index.js",
+  "style": "css/pip-boy-colors.css",
+  "files": [
+    "css/",
+    "js/",
+    "fonts/",
+    "demo/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "theme",
+    "css",
+    "fallout",
+    "pip-boy",
+    "crt",
+    "retro",
+    "terminal",
+    "green-phosphor",
+    "scanlines",
+    "ui-theme"
+  ],
+  "author": "壮爸",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/voice-notification-project"
+  },
+  "homepage": "https://github.com/your-username/voice-notification-project#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/voice-notification-project/issues"
+  },
+  "devDependencies": {},
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions"
+  ]
+}

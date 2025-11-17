@@ -1,0 +1,58 @@
+/**
+ * Pip-Boy Color Theme
+ * Fallout-inspired green phosphor CRT color palette
+ *
+ * Based on Fallout Pip-Boy standard colors:
+ * - Main green: #4af626 (Pip-Boy UI color)
+ * - Phosphor green: #33ff33 (P1 phosphor simulation)
+ * - Background: #0a0a0a (Near-black CRT screen)
+ */
+
+:root {
+    /* Primary colors | 主要颜色 */
+    --pip-boy-green: #4af626;           /* Pip-Boy 标志性绿色 */
+    --pip-boy-bg: #0a0a0a;              /* 接近全黑的背景 */
+    --pip-boy-phosphor: #33ff33;        /* P1 荧光绿 */
+
+    /* Text colors | 文本颜色 */
+    --pip-boy-text-primary: #4af626;    /* 主要文本 */
+    --pip-boy-text-secondary: #2d9518;  /* 次要文本（暗绿） */
+    --pip-boy-text-dim: #1a5a0f;        /* 暗淡文本 */
+    --pip-boy-text-bright: #f0fff8;     /* 高亮文本（接近白色） */
+
+    /* Status colors | 状态颜色 */
+    --pip-boy-success: #4af626;         /* 成功状态 */
+    --pip-boy-warning: #ffaa00;         /* 警告状态（琥珀色） */
+    --pip-boy-error: #ff4444;           /* 错误状态（红色） */
+    --pip-boy-info: #00aaff;            /* 信息状态（蓝色） */
+
+    /* UI element colors | UI 元素颜色 */
+    --pip-boy-border: #4af626;          /* 边框颜色 */
+    --pip-boy-border-dim: #2d9518;      /* 暗淡边框 */
+    --pip-boy-highlight: rgba(74, 246, 38, 0.2);  /* 高亮背景 */
+    --pip-boy-shadow: rgba(74, 246, 38, 0.3);     /* 阴影/发光 */
+
+    /* Glow effects | 发光效果 */
+    --pip-boy-glow-inner: #80ffc0;      /* 内层淡绿发光 */
+    --pip-boy-glow-mid: #00ff66;        /* 中层亮绿发光 */
+    --pip-boy-glow-outer: #00ff66;      /* 外层扩散发光 */
+
+    /* Scanline overlay | 扫描线叠加 */
+    --pip-boy-scanline: rgba(0, 0, 0, 0.3);  /* 扫描线深色 */
+
+    /* CRT screen effects | CRT 屏幕效果 */
+    --pip-boy-screen-tint: rgba(0, 255, 0, 0.1);  /* 屏幕绿色色调 */
+}
+
+/* Dark theme variant (optional) | 深色主题变体（可选） */
+[data-theme="dark"] {
+    --pip-boy-bg: #000000;              /* 纯黑背景 */
+    --pip-boy-text-primary: #3dd61f;    /* 稍暗的主要文本 */
+}
+
+/* High contrast mode (accessibility) | 高对比度模式（无障碍） */
+[data-theme="high-contrast"] {
+    --pip-boy-green: #00ff00;           /* 更亮的绿色 */
+    --pip-boy-text-primary: #00ff00;
+    --pip-boy-border: #00ff00;
+}

@@ -1,0 +1,284 @@
+/**
+ * Pip-Boy CRT Effects
+ * Retro CRT monitor effects (scanlines, flicker, phosphor glow)
+ *
+ * This file provides authentic CRT monitor visual effects:
+ * - Horizontal scanlines with animation
+ * - Screen flicker simulation
+ * - Green phosphor glow effects
+ * - Screen curvature (optional)
+ * - Boot-up animation
+ */
+
+/* ===========================
+   Scanlines Effect
+   =========================== */
+
+/**
+ * Scanline Overlay
+ * Creates horizontal lines across the screen
+ * Usage: Add class "pip-boy-scanlines" to any container
+ */
+.pip-boy-scanlines {
+    position: relative;
+}
+
+.pip-boy-scanlines::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        var(--pip-boy-scanline, rgba(0, 0, 0, 0.3)) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1000;
+    animation: pip-boy-scan 8s linear infinite;
+}
+
+@keyframes pip-boy-scan {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 0 100%;
+    }
+}
+
+/**
+ * Static Scanlines (No Animation)
+ * For better performance when animation is not needed
+ */
+.pip-boy-scanlines-static::before {
+    animation: none !important;
+}
+
+/* ===========================
+   CRT Flicker Effect
+   =========================== */
+
+/**
+ * Screen Flicker
+ * Simulates CRT monitor instability
+ * Usage: Add class "pip-boy-flicker" to content area
+ */
+.pip-boy-flicker {
+    animation: pip-boy-flicker-anim 0.15s infinite;
+}
+
+@keyframes pip-boy-flicker-anim {
+    0% {
+        opacity: 0.97;
+    }
+    25% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.95;
+    }
+    75% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.97;
+    }
+}
+
+/**
+ * Subtle Flicker
+ * Less intense flicker for extended viewing
+ */
+.pip-boy-flicker-subtle {
+    animation: pip-boy-flicker-subtle-anim 0.3s infinite;
+}
+
+@keyframes pip-boy-flicker-subtle-anim {
+    0%, 100% {
+        opacity: 0.98;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ===========================
+   Phosphor Glow Effects
+   =========================== */
+
+/**
+ * Text Glow (Single Layer)
+ * Basic green phosphor glow
+ */
+.pip-boy-glow {
+    text-shadow: 0 0 10px var(--pip-boy-glow-mid, #00ff66);
+}
+
+/**
+ * Text Glow (Multi-Layer)
+ * Realistic phosphor glow with multiple shadow layers
+ */
+.pip-boy-glow-multi {
+    color: var(--pip-boy-text-bright, #f0fff8);
+    text-shadow:
+        0 0 3px var(--pip-boy-glow-inner, #80ffc0),
+        0 0 10px var(--pip-boy-glow-mid, #00ff66),
+        0 0 20px var(--pip-boy-glow-mid, #00ff66),
+        0 0 30px var(--pip-boy-glow-outer, #00ff66);
+}
+
+/**
+ * Box Glow
+ * Glow effect for containers and panels
+ */
+.pip-boy-box-glow {
+    box-shadow:
+        inset 0 0 20px var(--pip-boy-screen-tint, rgba(0, 255, 0, 0.1)),
+        0 0 15px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+}
+
+/* ===========================
+   Screen Curvature (Optional)
+   =========================== */
+
+/**
+ * Curved CRT Screen
+ * Adds subtle barrel distortion to simulate curved glass
+ * Note: May impact performance
+ */
+.pip-boy-curved {
+    transform: perspective(1000px) rotateX(0deg);
+    border-radius: 20px;
+}
+
+.pip-boy-curved::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 50%,
+        rgba(0, 0, 0, 0.3) 100%
+    );
+    pointer-events: none;
+    z-index: 999;
+    border-radius: inherit;
+}
+
+/* ===========================
+   Boot-up Animation
+   =========================== */
+
+/**
+ * CRT Power-On Effect
+ * Simulates old CRT monitor boot sequence
+ * Usage: Add class "pip-boy-boot" to container
+ */
+.pip-boy-boot {
+    animation: pip-boy-boot-anim 1.5s ease-out;
+}
+
+@keyframes pip-boy-boot-anim {
+    0% {
+        transform: scaleY(0) scaleX(1);
+        opacity: 0;
+    }
+    50% {
+        transform: scaleY(0.02) scaleX(1);
+        opacity: 0.5;
+    }
+    80% {
+        transform: scaleY(1) scaleX(0.95);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scaleY(1) scaleX(1);
+        opacity: 1;
+    }
+}
+
+/**
+ * Screen Flash
+ * Quick flash effect when transitioning
+ */
+.pip-boy-flash {
+    animation: pip-boy-flash-anim 0.3s ease-out;
+}
+
+@keyframes pip-boy-flash-anim {
+    0% {
+        opacity: 1;
+        filter: brightness(1.5);
+    }
+    50% {
+        opacity: 0.8;
+        filter: brightness(2);
+    }
+    100% {
+        opacity: 1;
+        filter: brightness(1);
+    }
+}
+
+/* ===========================
+   Noise Texture (Optional)
+   =========================== */
+
+/**
+ * Static Noise Overlay
+ * Adds subtle noise texture for authenticity
+ */
+.pip-boy-noise {
+    position: relative;
+}
+
+.pip-boy-noise::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" /></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.05"/></svg>');
+    pointer-events: none;
+    opacity: 0.05;
+    z-index: 998;
+}
+
+/* ===========================
+   Performance Optimization
+   =========================== */
+
+/**
+ * Disable Animations
+ * For systems with reduced motion preference
+ */
+@media (prefers-reduced-motion: reduce) {
+    .pip-boy-scanlines::before,
+    .pip-boy-flicker,
+    .pip-boy-flicker-subtle,
+    .pip-boy-boot,
+    .pip-boy-flash {
+        animation: none !important;
+    }
+}
+
+/**
+ * Low Performance Mode
+ * Disable heavy effects for better performance
+ */
+.pip-boy-low-perf .pip-boy-scanlines::before {
+    animation: none;
+}
+
+.pip-boy-low-perf .pip-boy-curved::after,
+.pip-boy-low-perf .pip-boy-noise::after {
+    display: none;
+}

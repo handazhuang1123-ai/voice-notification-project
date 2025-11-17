@@ -43,7 +43,11 @@ param(
 )
 
 # Set default paths relative to project root | 设置相对于项目根目录的默认路径
-$ProjectRoot = Split-Path -Path $PSScriptRoot -Parent | Split-Path -Parent | Split-Path -Parent
+# Navigate up from scripts/viewers/log-viewers/ to project root
+# 从 scripts/viewers/log-viewers/ 向上导航到项目根目录
+$ProjectRoot = Split-Path -Path $PSScriptRoot -Parent  # -> scripts/viewers
+$ProjectRoot = Split-Path -Path $ProjectRoot -Parent    # -> scripts
+$ProjectRoot = Split-Path -Path $ProjectRoot -Parent    # -> project root
 if (-not $LogFilePath) {
     $LogFilePath = Join-Path $ProjectRoot ".claude\hooks\extensions\voice-summary\logs\voice-unified.log"
 }
@@ -60,6 +64,7 @@ function Parse-LogLine {
         将单行日志解析为结构化数据
     #>
     [CmdletBinding()]
+    [OutputType([System.Collections.Specialized.OrderedDictionary])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Line
@@ -88,6 +93,7 @@ function Extract-SessionData {
         从会话日志行中提取结构化数据
     #>
     [CmdletBinding()]
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
         [array]$SessionLines
@@ -163,14 +169,20 @@ function Convert-ToIso8601 {
         将日志时间戳转换为 ISO 8601 格式
     #>
     [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Timestamp
     )
 
     try {
+        # Parse as local time (Beijing Time / UTC+8)
+        # 解析为本地时间（北京时间 / UTC+8）
         $DateTime = [DateTime]::ParseExact($Timestamp, "yyyy-MM-dd HH:mm:ss.fff", $null)
-        return $DateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+
+        # Convert to UTC time for international standard compliance
+        # 转换为 UTC 时间以符合国际标准
+        return $DateTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     }
     catch {
         return $Timestamp
@@ -184,6 +196,7 @@ function Calculate-Duration {
         计算两个时间戳之间的时长（秒）
     #>
     [CmdletBinding()]
+    [OutputType([double])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$StartTime,

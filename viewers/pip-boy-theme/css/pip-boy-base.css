@@ -1,0 +1,237 @@
+/**
+ * Pip-Boy Base Styles
+ * Core layout, typography, and container styles
+ *
+ * This file defines the foundational styles for Pip-Boy themed interfaces:
+ * - Global resets and base styles
+ * - Typography (VT323 retro terminal font)
+ * - Container and layout structures
+ * - Base responsive behavior
+ */
+
+/* ===========================
+   Global Reset
+   =========================== */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===========================
+   Typography
+   =========================== */
+
+/**
+ * VT323 Font Setup
+ * Import from Google Fonts or use local fallback
+ */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+body {
+    font-family: 'VT323', 'Courier New', 'Courier', monospace;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--pip-boy-text-primary, #4af626);
+    background: var(--pip-boy-bg, #0a0a0a);
+    overflow: hidden;
+}
+
+/* Heading styles | 标题样式 */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'VT323', monospace;
+    font-weight: normal;
+    color: var(--pip-boy-text-bright, #f0fff8);
+    text-shadow: 0 0 10px var(--pip-boy-glow-mid, #00ff66);
+    margin-bottom: 10px;
+}
+
+h1 { font-size: 32px; }
+h2 { font-size: 28px; }
+h3 { font-size: 24px; }
+h4 { font-size: 20px; }
+h5 { font-size: 18px; }
+h6 { font-size: 16px; }
+
+/* Paragraph and text | 段落和文本 */
+p {
+    margin-bottom: 10px;
+    color: var(--pip-boy-text-primary, #4af626);
+}
+
+/* Code and pre | 代码和预格式化文本 */
+code, pre {
+    font-family: 'VT323', 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+pre {
+    padding: 15px;
+    overflow-x: auto;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* Links | 链接 */
+a {
+    color: var(--pip-boy-text-primary, #4af626);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+a:hover {
+    color: var(--pip-boy-text-bright, #f0fff8);
+    text-shadow: 0 0 10px var(--pip-boy-glow-mid, #00ff66);
+}
+
+/* ===========================
+   Container Layouts
+   =========================== */
+
+/**
+ * Main CRT Container
+ * Simulates the outer frame of a CRT monitor
+ */
+.pip-boy-container {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--pip-boy-bg, #0a0a0a);
+    padding: 20px;
+    overflow: hidden;
+}
+
+/**
+ * CRT Screen
+ * The main content area with screen inset shadow
+ */
+.pip-boy-screen {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 40px);
+    background: var(--pip-boy-bg, #0a0a0a);
+    border: 3px solid var(--pip-boy-border, #4af626);
+    box-shadow:
+        inset 0 0 50px var(--pip-boy-screen-tint, rgba(0, 255, 0, 0.1)),
+        0 0 20px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+    overflow: auto;
+}
+
+/**
+ * Content Wrapper
+ * Padding and spacing for inner content
+ */
+.pip-boy-content {
+    padding: 20px;
+    color: var(--pip-boy-text-primary, #4af626);
+    position: relative;
+    z-index: 5;
+}
+
+/* ===========================
+   Layout Utilities
+   =========================== */
+
+/**
+ * Master-Detail Layout
+ * Left sidebar (30%) + Right detail panel (70%)
+ */
+.pip-boy-layout-master-detail {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+}
+
+.pip-boy-master {
+    width: 30%;
+    min-width: 250px;
+}
+
+.pip-boy-detail {
+    width: 70%;
+    flex: 1;
+}
+
+/**
+ * Header-Content-Footer Layout
+ * Fixed header and footer with scrollable content
+ */
+.pip-boy-layout-hcf {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.pip-boy-header {
+    flex-shrink: 0;
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--pip-boy-border-dim, #2d9518);
+    text-align: center;
+}
+
+.pip-boy-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.pip-boy-footer {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-top: 2px solid var(--pip-boy-border-dim, #2d9518);
+    text-align: center;
+    font-size: 16px;
+}
+
+/* ===========================
+   Scrollbar Styling
+   =========================== */
+
+.pip-boy-screen::-webkit-scrollbar,
+.pip-boy-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+.pip-boy-screen::-webkit-scrollbar-track,
+.pip-boy-body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.pip-boy-screen::-webkit-scrollbar-thumb,
+.pip-boy-body::-webkit-scrollbar-thumb {
+    background: var(--pip-boy-border-dim, #2d9518);
+    border-radius: 5px;
+}
+
+.pip-boy-screen::-webkit-scrollbar-thumb:hover,
+.pip-boy-body::-webkit-scrollbar-thumb:hover {
+    background: var(--pip-boy-border, #4af626);
+}
+
+/* ===========================
+   Responsive Behavior
+   =========================== */
+
+@media (max-width: 768px) {
+    .pip-boy-layout-master-detail {
+        flex-direction: column;
+    }
+
+    .pip-boy-master,
+    .pip-boy-detail {
+        width: 100%;
+    }
+
+    .pip-boy-container {
+        padding: 10px;
+    }
+
+    body {
+        font-size: 16px;
+    }
+}

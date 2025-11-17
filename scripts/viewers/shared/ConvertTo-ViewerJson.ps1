@@ -74,10 +74,28 @@
         # Convert to JSON with proper formatting | 转换为格式化的 JSON
         $JsonContent = $ViewerData | ConvertTo-Json -Depth 10 -Compress:$false
 
+        # Adjust indentation to 2 spaces per .editorconfig (ConvertTo-Json uses 4 by default)
+        # 调整缩进为 2 空格以符合 .editorconfig（ConvertTo-Json 默认使用 4 空格）
+        $Lines = $JsonContent -split "`r?`n"
+        $JsonContent = ($Lines | ForEach-Object {
+            if ($_ -match '^(    )+') {
+                $IndentCount = $Matches[0].Length / 4
+                ('  ' * $IndentCount) + $_.Substring($Matches[0].Length)
+            } else {
+                $_
+            }
+        }) -join "`n"
+
+        # Convert to LF line endings per .editorconfig (JSON files should use LF)
+        # 转换为 LF 换行符以符合 .editorconfig（JSON 文件应使用 LF）
+        $JsonContent = $JsonContent -replace "`r`n", "`n"
+
         # Save to file with UTF-8 (no BOM) encoding | 使用 UTF-8（无 BOM）编码保存到文件
         # PowerShell 7+: Use utf8NoBOM; PowerShell 5.1: Use [System.IO.File]::WriteAllText
         if ($PSVersionTable.PSVersion.Major -ge 7) {
-            $JsonContent | Out-File -FilePath $OutputPath -Encoding utf8NoBOM -Force
+            # Use .NET method to ensure LF line endings are preserved
+            # 使用 .NET 方法确保保留 LF 换行符
+            [System.IO.File]::WriteAllText($OutputPath, $JsonContent, [System.Text.UTF8Encoding]::new($false))
         }
         else {
             # PowerShell 5.1 fallback - UTF-8 without BOM

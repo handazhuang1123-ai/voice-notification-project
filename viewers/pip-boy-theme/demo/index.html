@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pip-Boy Theme Demo - ROBCO INDUSTRIES</title>
+
+    <!-- Pip-Boy Theme CSS -->
+    <link rel="stylesheet" href="../css/pip-boy-colors.css">
+    <link rel="stylesheet" href="../css/pip-boy-base.css">
+    <link rel="stylesheet" href="../css/pip-boy-crt.css">
+    <link rel="stylesheet" href="../css/pip-boy-components.css">
+</head>
+<body>
+    <div class="pip-boy-container pip-boy-scanlines pip-boy-flicker pip-boy-boot">
+        <div class="pip-boy-screen pip-boy-box-glow">
+            <div class="pip-boy-layout-hcf">
+                <!-- Header -->
+                <div class="pip-boy-header">
+                    <h1 class="pip-boy-glow-multi">ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM</h1>
+                    <p>COPYRIGHT 2075-2077 ROBCO INDUSTRIES</p>
+                    <p>-SERVER 1-</p>
+                </div>
+
+                <!-- Body -->
+                <div class="pip-boy-body">
+                    <div class="pip-boy-content">
+                        <!-- Demo Section: Panels -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">1. Panels & Frames</h2>
+
+                            <div class="pip-boy-panel" style="margin-bottom: 20px;">
+                                <div class="pip-boy-panel-header">Standard Panel with Header</div>
+                                <div class="pip-boy-panel-body">
+                                    This is a standard panel with a header. It uses the Pip-Boy green border
+                                    and includes an inset glow effect to simulate the CRT screen.
+                                </div>
+                            </div>
+
+                            <div class="pip-boy-frame">
+                                <h3 class="pip-boy-glow">Framed Panel</h3>
+                                <p>This is a framed panel with double borders for emphasis.</p>
+                            </div>
+                        </section>
+
+                        <!-- Demo Section: Lists -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">2. Lists & Navigation</h2>
+
+                            <div class="pip-boy-panel">
+                                <div class="pip-boy-panel-header">Session List (Use ↑↓ to Navigate)</div>
+                                <div class="pip-boy-panel-body">
+                                    <ul class="pip-boy-list">
+                                        <li class="pip-boy-list-item pip-boy-list-item-icon active" data-id="1">
+                                            <strong>Session #001</strong><br>
+                                            <span style="font-size: 14px; color: var(--pip-boy-text-secondary);">
+                                                2025-01-16 14:30:05 | Status: Success
+                                            </span>
+                                        </li>
+                                        <li class="pip-boy-list-item pip-boy-list-item-icon" data-id="2">
+                                            <strong>Session #002</strong><br>
+                                            <span style="font-size: 14px; color: var(--pip-boy-text-secondary);">
+                                                2025-01-16 14:25:30 | Status: Warning
+                                            </span>
+                                        </li>
+                                        <li class="pip-boy-list-item pip-boy-list-item-icon" data-id="3">
+                                            <strong>Session #003</strong><br>
+                                            <span style="font-size: 14px; color: var(--pip-boy-text-secondary);">
+                                                2025-01-16 14:20:15 | Status: Error
+                                            </span>
+                                        </li>
+                                        <li class="pip-boy-list-item pip-boy-list-item-icon" data-id="4">
+                                            <strong>Session #004</strong><br>
+                                            <span style="font-size: 14px; color: var(--pip-boy-text-secondary);">
+                                                2025-01-16 14:15:00 | Status: Success
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Demo Section: Buttons -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">3. Buttons</h2>
+
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <button class="pip-boy-button">Standard Button</button>
+                                <button class="pip-boy-button pip-boy-button-primary">Primary Button</button>
+                                <button class="pip-boy-button pip-boy-button-danger">Danger Button</button>
+                                <button class="pip-boy-button pip-boy-button-disabled">Disabled Button</button>
+                            </div>
+                        </section>
+
+                        <!-- Demo Section: Status Badges -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">4. Status Badges</h2>
+
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <span class="pip-boy-badge pip-boy-badge-success">SUCCESS</span>
+                                <span class="pip-boy-badge pip-boy-badge-warning">WARNING</span>
+                                <span class="pip-boy-badge pip-boy-badge-error">ERROR</span>
+                                <span class="pip-boy-badge pip-boy-badge-info">INFO</span>
+                            </div>
+                        </section>
+
+                        <!-- Demo Section: Table -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">5. Data Table</h2>
+
+                            <table class="pip-boy-table">
+                                <thead>
+                                    <tr>
+                                        <th>Session ID</th>
+                                        <th>Timestamp</th>
+                                        <th>Message</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>abc123</td>
+                                        <td>2025-01-16 14:30:05</td>
+                                        <td>System startup complete</td>
+                                        <td><span class="pip-boy-badge pip-boy-badge-success">SUCCESS</span></td>
+                                    </tr>
+                                    <tr class="active">
+                                        <td>def456</td>
+                                        <td>2025-01-16 14:25:30</td>
+                                        <td>Warning: High latency detected</td>
+                                        <td><span class="pip-boy-badge pip-boy-badge-warning">WARNING</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>ghi789</td>
+                                        <td>2025-01-16 14:20:15</td>
+                                        <td>Error: Connection timeout</td>
+                                        <td><span class="pip-boy-badge pip-boy-badge-error">ERROR</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </section>
+
+                        <!-- Demo Section: Form Inputs -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">6. Form Inputs</h2>
+
+                            <div class="pip-boy-panel pip-boy-panel-body">
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px;">Text Input:</label>
+                                    <input type="text" class="pip-boy-input" placeholder="Enter text...">
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" class="pip-boy-checkbox" checked>
+                                        <span>Enable CRT effects</span>
+                                    </label>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" class="pip-boy-checkbox">
+                                        <span>Enable scanlines</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Demo Section: Text Effects -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">7. Text Glow Effects</h2>
+
+                            <p class="pip-boy-glow">Single-layer glow text</p>
+                            <p class="pip-boy-glow-multi">Multi-layer phosphor glow text (more realistic)</p>
+                            <p class="pip-boy-text-dim">Dimmed text (secondary information)</p>
+                            <p class="pip-boy-text-bright">Bright text (highlights)</p>
+                        </section>
+
+                        <!-- Demo Section: Code Block -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">8. Code Block</h2>
+
+                            <pre><code>{
+  "sessionId": "abc123",
+  "timestamp": "2025-01-16T14:30:05Z",
+  "message": "System startup complete",
+  "duration": 2.5,
+  "status": "Success"
+}</code></pre>
+                        </section>
+
+                        <!-- Demo Section: Loading & Error States -->
+                        <section style="margin-bottom: 40px;">
+                            <h2 class="pip-boy-glow">9. Loading & Error States</h2>
+
+                            <div class="pip-boy-panel pip-boy-panel-body" style="margin-bottom: 15px;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div class="pip-boy-spinner" style="display: inline-block;"></div>
+                                    <span style="margin-left: 10px;">Loading data...</span>
+                                </div>
+                            </div>
+
+                            <div class="pip-boy-panel pip-boy-panel-body">
+                                <div style="text-align: center; padding: 20px; color: var(--pip-boy-error);">
+                                    <strong>ERROR: Failed to load resource</strong><br>
+                                    <span style="font-size: 14px;">Connection timeout after 30000ms</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <hr class="pip-boy-divider-glow">
+
+                        <!-- Info Footer -->
+                        <div class="pip-boy-text-center" style="margin-top: 30px;">
+                            <p class="pip-boy-text-dim">End of demonstration</p>
+                            <p class="pip-boy-text-dim">Pip-Boy Theme v1.0 | ROBCO INDUSTRIES</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="pip-boy-footer">
+                    <kbd>↑</kbd> <kbd>↓</kbd> Navigate |
+                    <kbd>Enter</kbd> Select |
+                    <kbd>Esc</kbd> Exit |
+                    <kbd>F1</kbd> Help
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pip-Boy Theme JavaScript -->
+    <script src="../js/keyboard-navigation.js"></script>
+    <script src="../js/data-loader.js"></script>
+
+    <script>
+        // Initialize keyboard navigation for the list
+        const nav = new PipBoyKeyboardNav('.pip-boy-list-item');
+
+        nav.onSelect = function(item, index) {
+            console.log('Selected item:', item.getAttribute('data-id'), 'at index:', index);
+            alert('Selected: ' + item.querySelector('strong').textContent);
+        };
+
+        nav.onChange = function(item, index) {
+            console.log('Changed to item:', item.getAttribute('data-id'), 'at index:', index);
+        };
+
+        // Button click handlers
+        document.querySelectorAll('.pip-boy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (!this.classList.contains('pip-boy-button-disabled')) {
+                    console.log('Button clicked:', this.textContent);
+                }
+            });
+        });
+
+        // Add click sound effect (optional)
+        document.addEventListener('click', function() {
+            // You can add a subtle click sound here if desired
+            console.log('Click registered');
+        });
+
+        console.log('Pip-Boy Theme Demo initialized successfully!');
+        console.log('Try using arrow keys to navigate the list!');
+    </script>
+</body>
+</html>

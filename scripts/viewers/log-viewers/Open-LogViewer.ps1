@@ -53,9 +53,16 @@ try {
     Write-Information "=== Opening Pip-Boy Log Viewer ===" -InformationAction Continue
 
     # Get project root directory | 获取项目根目录
-    $ProjectRoot = Split-Path -Path $PSScriptRoot -Parent | Split-Path -Parent | Split-Path -Parent
-    $ViewerRootPath = Join-Path $ProjectRoot "viewers\log-viewer"
-    $ViewerHtmlPath = Join-Path $ViewerRootPath "index.html"
+    # Navigate up from scripts/viewers/log-viewers/ to project root
+    # 从 scripts/viewers/log-viewers/ 向上导航到项目根目录
+    $ProjectRoot = Split-Path -Path $PSScriptRoot -Parent  # -> scripts/viewers
+    $ProjectRoot = Split-Path -Path $ProjectRoot -Parent    # -> scripts
+    $ProjectRoot = Split-Path -Path $ProjectRoot -Parent    # -> project root
+
+    # Serve from viewers directory to allow access to both log-viewer and pip-boy-theme
+    # 从 viewers 目录提供服务，以便同时访问 log-viewer 和 pip-boy-theme
+    $ViewerRootPath = Join-Path $ProjectRoot "viewers"
+    $ViewerHtmlPath = Join-Path $ViewerRootPath "log-viewer\index.html"
     $ExportScriptPath = Join-Path $PSScriptRoot "Export-LogsData.ps1"
 
     # Check if viewer HTML exists | 检查查看器 HTML 是否存在
@@ -106,10 +113,10 @@ try {
 
     # Open viewer in default browser | 在默认浏览器中打开查看器
     Write-Information "`n[3/3] Opening viewer in browser..." -InformationAction Continue
-    Start-Process "http://localhost:$Port/index.html"
+    Start-Process "http://localhost:$Port/log-viewer/index.html"
 
     Write-Information "`n✓ Log viewer opened successfully!" -InformationAction Continue
-    Write-Information "  URL: http://localhost:$Port/index.html" -InformationAction Continue
+    Write-Information "  URL: http://localhost:$Port/log-viewer/index.html" -InformationAction Continue
     Write-Information "`n=== Pip-Boy Log Viewer Ready ===" -InformationAction Continue
     Write-Information "`nPress Ctrl+C to stop the server and exit..." -InformationAction Continue
     Write-Information "The server will serve files from: $ViewerRootPath" -InformationAction Continue

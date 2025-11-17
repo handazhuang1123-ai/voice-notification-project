@@ -10,7 +10,7 @@
     const sessionListEl = document.getElementById('sessionList');
     const detailPanelEl = document.getElementById('detailPanel');
     const sessionCountEl = document.getElementById('session-count');
-    const headerEl = document.querySelector('.session-list-header');
+    const headerEl = document.querySelector('.session-list-title');
 
     // 创建管理器和渲染器
     const sessionManager = new SessionManager();

@@ -1,0 +1,412 @@
+/**
+ * Pip-Boy UI Components
+ * Reusable UI components (panels, lists, buttons, etc.)
+ *
+ * This file provides styled components for building Pip-Boy interfaces:
+ * - Panels and frames
+ * - Lists and list items
+ * - Buttons and interactive elements
+ * - Tables and data grids
+ * - Form inputs
+ * - Status indicators
+ */
+
+/* ===========================
+   Panels and Frames
+   =========================== */
+
+/**
+ * Standard Panel
+ * Basic container with border and glow
+ */
+.pip-boy-panel {
+    background: var(--pip-boy-bg, #0a0a0a);
+    border: 2px solid var(--pip-boy-border, #4af626);
+    padding: 15px;
+    box-shadow: inset 0 0 20px var(--pip-boy-screen-tint, rgba(0, 255, 0, 0.1));
+}
+
+/**
+ * Panel with Header
+ * Panel with title bar
+ */
+.pip-boy-panel-header {
+    padding: 10px 15px;
+    background: rgba(74, 246, 38, 0.1);
+    border-bottom: 2px solid var(--pip-boy-border-dim, #2d9518);
+    font-size: 20px;
+    font-weight: bold;
+    text-shadow: 0 0 10px var(--pip-boy-glow-mid, #00ff66);
+}
+
+.pip-boy-panel-body {
+    padding: 15px;
+}
+
+/**
+ * Framed Panel
+ * Panel with double border
+ */
+.pip-boy-frame {
+    border: 3px double var(--pip-boy-border, #4af626);
+    padding: 20px;
+    position: relative;
+}
+
+.pip-boy-frame::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border: 1px solid var(--pip-boy-border-dim, #2d9518);
+    pointer-events: none;
+}
+
+/* ===========================
+   Lists and List Items
+   =========================== */
+
+/**
+ * Standard List
+ * Basic vertical list container
+ */
+.pip-boy-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/**
+ * List Item
+ * Individual list entry
+ */
+.pip-boy-list-item {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border: 1px solid var(--pip-boy-border-dim, #2d9518);
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pip-boy-list-item:hover {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.2));
+    border-color: var(--pip-boy-border, #4af626);
+    transform: translateX(5px);
+}
+
+.pip-boy-list-item.active {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.2));
+    border-color: var(--pip-boy-border, #4af626);
+    box-shadow: 0 0 15px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+}
+
+/**
+ * Compact List Item
+ * Smaller padding for dense lists
+ */
+.pip-boy-list-item-compact {
+    padding: 8px 12px;
+    font-size: 16px;
+}
+
+/**
+ * List Item with Icon
+ * List item with left icon slot
+ */
+.pip-boy-list-item-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pip-boy-list-item-icon::before {
+    content: "▶";
+    font-size: 14px;
+    color: var(--pip-boy-text-secondary, #2d9518);
+}
+
+.pip-boy-list-item-icon.active::before {
+    color: var(--pip-boy-text-primary, #4af626);
+}
+
+/* ===========================
+   Buttons
+   =========================== */
+
+/**
+ * Standard Button
+ * Basic interactive button
+ */
+.pip-boy-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background: transparent;
+    border: 2px solid var(--pip-boy-border, #4af626);
+    color: var(--pip-boy-text-primary, #4af626);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 5px var(--pip-boy-glow-mid, #00ff66);
+}
+
+.pip-boy-button:hover {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.2));
+    box-shadow: 0 0 15px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+    transform: scale(1.05);
+}
+
+.pip-boy-button:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 0 10px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+}
+
+/**
+ * Button Variants
+ */
+.pip-boy-button-primary {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.2));
+}
+
+.pip-boy-button-danger {
+    border-color: var(--pip-boy-error, #ff4444);
+    color: var(--pip-boy-error, #ff4444);
+}
+
+.pip-boy-button-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ===========================
+   Tables
+   =========================== */
+
+/**
+ * Data Table
+ * Tabular data display
+ */
+.pip-boy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+}
+
+.pip-boy-table th,
+.pip-boy-table td {
+    padding: 10px 15px;
+    border: 1px solid var(--pip-boy-border-dim, #2d9518);
+    text-align: left;
+}
+
+.pip-boy-table th {
+    background: rgba(74, 246, 38, 0.1);
+    font-weight: bold;
+    text-shadow: 0 0 5px var(--pip-boy-glow-mid, #00ff66);
+}
+
+.pip-boy-table tr:hover {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.15));
+}
+
+.pip-boy-table tr.active {
+    background: var(--pip-boy-highlight, rgba(74, 246, 38, 0.2));
+    border: 2px solid var(--pip-boy-border, #4af626);
+}
+
+/* ===========================
+   Form Inputs
+   =========================== */
+
+/**
+ * Text Input
+ * Standard text input field
+ */
+.pip-boy-input {
+    width: 100%;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--pip-boy-border-dim, #2d9518);
+    color: var(--pip-boy-text-primary, #4af626);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.pip-boy-input:focus {
+    border-color: var(--pip-boy-border, #4af626);
+    box-shadow: 0 0 10px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+}
+
+.pip-boy-input::placeholder {
+    color: var(--pip-boy-text-dim, #1a5a0f);
+}
+
+/**
+ * Checkbox
+ * Custom styled checkbox
+ */
+.pip-boy-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--pip-boy-border, #4af626);
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    position: relative;
+}
+
+.pip-boy-checkbox:checked::before {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--pip-boy-text-primary, #4af626);
+    font-size: 16px;
+}
+
+/* ===========================
+   Status Indicators
+   =========================== */
+
+/**
+ * Status Badge
+ * Colored status indicator
+ */
+.pip-boy-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid;
+    font-size: 14px;
+    text-align: center;
+    min-width: 60px;
+}
+
+.pip-boy-badge-success {
+    color: var(--pip-boy-success, #4af626);
+    border-color: var(--pip-boy-success, #4af626);
+}
+
+.pip-boy-badge-warning {
+    color: var(--pip-boy-warning, #ffaa00);
+    border-color: var(--pip-boy-warning, #ffaa00);
+}
+
+.pip-boy-badge-error {
+    color: var(--pip-boy-error, #ff4444);
+    border-color: var(--pip-boy-error, #ff4444);
+}
+
+.pip-boy-badge-info {
+    color: var(--pip-boy-info, #00aaff);
+    border-color: var(--pip-boy-info, #00aaff);
+}
+
+/**
+ * Loading Spinner
+ * Animated loading indicator
+ */
+.pip-boy-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--pip-boy-border-dim, #2d9518);
+    border-top-color: var(--pip-boy-border, #4af626);
+    border-radius: 50%;
+    animation: pip-boy-spin 0.8s linear infinite;
+}
+
+@keyframes pip-boy-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===========================
+   Dividers
+   =========================== */
+
+/**
+ * Horizontal Rule
+ * Section divider
+ */
+.pip-boy-divider {
+    border: none;
+    border-top: 2px solid var(--pip-boy-border-dim, #2d9518);
+    margin: 20px 0;
+}
+
+.pip-boy-divider-glow {
+    border-top-color: var(--pip-boy-border, #4af626);
+    box-shadow: 0 0 10px var(--pip-boy-shadow, rgba(74, 246, 38, 0.3));
+}
+
+/* ===========================
+   Tooltips
+   =========================== */
+
+/**
+ * Tooltip
+ * Hover information popup
+ */
+.pip-boy-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.pip-boy-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid var(--pip-boy-border, #4af626);
+    color: var(--pip-boy-text-primary, #4af626);
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+}
+
+.pip-boy-tooltip:hover::after {
+    opacity: 1;
+}
+
+/* ===========================
+   Utility Classes
+   =========================== */
+
+.pip-boy-text-center {
+    text-align: center;
+}
+
+.pip-boy-text-right {
+    text-align: right;
+}
+
+.pip-boy-text-dim {
+    color: var(--pip-boy-text-dim, #1a5a0f);
+}
+
+.pip-boy-text-bright {
+    color: var(--pip-boy-text-bright, #f0fff8);
+}
+
+.pip-boy-hidden {
+    display: none !important;
+}
+
+.pip-boy-visible {
+    display: block !important;
+}
