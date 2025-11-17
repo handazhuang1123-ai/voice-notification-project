@@ -70,7 +70,7 @@
             padding: 10px;
         }
 
-        .session-item {
+        .session-item, .date-item {
             padding: 12px;
             margin-bottom: 8px;
             border: 1px solid #444;
@@ -79,15 +79,34 @@
             transition: all 0.2s;
         }
 
-        .session-item:hover {
+        .session-item:hover, .date-item:hover {
             background: #333;
             border-color: #666;
         }
 
-        .session-item.active {
+        .session-item.active, .date-item.active {
             background: #0066cc;
             border-color: #0099ff;
             color: #fff;
+        }
+
+        .date-item {
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .date-label {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .date-count {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .date-item.active .date-count {
+            color: #ccc;
         }
 
         .session-id {
@@ -266,10 +285,10 @@
 
         <div class="footer">
             <kbd>↑</kbd> <kbd>↓</kbd> 导航 |
-            <kbd>Enter</kbd> 选择 |
+            <kbd>Enter</kbd> <kbd>→</kbd> 进入 |
+            <kbd>←</kbd> <kbd>Esc</kbd> 返回 |
             <kbd>Home</kbd> 第一项 |
-            <kbd>End</kbd> 最后一项 |
-            <kbd>Esc</kbd> 取消选择
+            <kbd>End</kbd> 最后一项
         </div>
     </div>
 

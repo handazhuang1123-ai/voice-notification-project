@@ -1,30 +1,95 @@
 /**
- * Session Manager - 会话管理和键盘导航
- * 负责：会话选择、键盘导航、状态管理
+ * Session Manager - 会话管理和两级导航
+ * 负责：日期分组、两级导航、键盘控制、状态管理
  */
 
 class SessionManager {
     constructor() {
-        this.sessions = [];
-        this.selectedIndex = -1;
-        this.onSelectionChange = null; // 回调函数
+        this.allSessions = [];      // 所有会话（倒序）
+        this.dateGroups = [];        // 日期分组
+        this.currentMode = 'date';   // 当前模式：'date' 或 'session'
+        this.selectedDateIndex = -1;
+        this.selectedSessionIndex = -1;
+        this.onModeChange = null;    // 模式切换回调
+        this.onSelectionChange = null; // 选择变化回调
     }
 
     /**
-     * 设置会话数据
+     * 设置会话数据并分组
      * @param {Array} sessions - 会话数组
      */
     setSessions(sessions) {
-        this.sessions = sessions;
-        this.selectedIndex = sessions.length > 0 ? 0 : -1;
+        // 倒序排列（最新的在前）
+        this.allSessions = [...sessions].reverse();
+
+        // 按日期分组
+        this._groupByDate();
+
+        // 初始化：选中第一个日期
+        if (this.dateGroups.length > 0) {
+            this.selectedDateIndex = 0;
+        }
     }
 
     /**
-     * 获取所有会话
+     * 按日期分组
+     * @private
+     */
+    _groupByDate() {
+        const groups = {};
+
+        this.allSessions.forEach(session => {
+            const date = this._getDateKey(session.timestamp);
+            if (!groups[date]) {
+                groups[date] = {
+                    date: date,
+                    sessions: []
+                };
+            }
+            groups[date].sessions.push(session);
+        });
+
+        // 转换为数组并按日期倒序排列
+        this.dateGroups = Object.values(groups).sort((a, b) => {
+            return b.date.localeCompare(a.date);
+        });
+    }
+
+    /**
+     * 从时间戳提取日期键
+     * @param {string} timestamp - ISO 8601 时间戳
+     * @returns {string} - YYYY-MM-DD 格式
+     * @private
+     */
+    _getDateKey(timestamp) {
+        try {
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            return 'unknown';
+        }
+    }
+
+    /**
+     * 获取日期分组
      * @returns {Array}
      */
-    getSessions() {
-        return this.sessions;
+    getDateGroups() {
+        return this.dateGroups;
+    }
+
+    /**
+     * 获取当前选中日期的会话列表
+     * @returns {Array}
+     */
+    getCurrentDateSessions() {
+        if (this.selectedDateIndex >= 0 && this.selectedDateIndex < this.dateGroups.length) {
+            return this.dateGroups[this.selectedDateIndex].sessions;
+        }
+        return [];
     }
 
     /**
@@ -32,50 +97,109 @@ class SessionManager {
      * @returns {Object|null}
      */
     getSelectedSession() {
-        if (this.selectedIndex >= 0 && this.selectedIndex < this.sessions.length) {
-            return this.sessions[this.selectedIndex];
+        const sessions = this.getCurrentDateSessions();
+        if (this.selectedSessionIndex >= 0 && this.selectedSessionIndex < sessions.length) {
+            return sessions[this.selectedSessionIndex];
         }
         return null;
     }
 
     /**
-     * 获取当前选中的索引
+     * 获取当前模式
+     * @returns {string} - 'date' 或 'session'
+     */
+    getCurrentMode() {
+        return this.currentMode;
+    }
+
+    /**
+     * 获取当前选中的日期索引
      * @returns {number}
      */
-    getSelectedIndex() {
-        return this.selectedIndex;
+    getSelectedDateIndex() {
+        return this.selectedDateIndex;
     }
 
     /**
-     * 选择指定索引的会话
-     * @param {number} index - 索引
+     * 获取当前选中的会话索引
+     * @returns {number}
      */
-    selectSession(index) {
-        if (index >= 0 && index < this.sessions.length) {
-            this.selectedIndex = index;
+    getSelectedSessionIndex() {
+        return this.selectedSessionIndex;
+    }
+
+    /**
+     * 获取当前选中日期的信息
+     * @returns {Object|null}
+     */
+    getSelectedDateInfo() {
+        if (this.selectedDateIndex >= 0 && this.selectedDateIndex < this.dateGroups.length) {
+            return this.dateGroups[this.selectedDateIndex];
+        }
+        return null;
+    }
+
+    /**
+     * 进入日志列表模式
+     */
+    enterSessionMode() {
+        if (this.currentMode === 'date' && this.dateGroups.length > 0) {
+            this.currentMode = 'session';
+            // 自动选中第一条（最新的）
+            this.selectedSessionIndex = 0;
+            this._triggerModeChange();
             this._triggerSelectionChange();
         }
     }
 
     /**
-     * 向上移动选择
+     * 返回日期列表模式
+     */
+    backToDateMode() {
+        if (this.currentMode === 'session') {
+            this.currentMode = 'date';
+            this.selectedSessionIndex = -1;
+            this._triggerModeChange();
+            this._triggerSelectionChange();
+        }
+    }
+
+    /**
+     * 向上移动
      */
     moveUp() {
-        if (this.selectedIndex > 0) {
-            this.selectedIndex--;
-            this._triggerSelectionChange();
-            this._scrollToSelected();
+        if (this.currentMode === 'date') {
+            if (this.selectedDateIndex > 0) {
+                this.selectedDateIndex--;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
+        } else {
+            if (this.selectedSessionIndex > 0) {
+                this.selectedSessionIndex--;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
         }
     }
 
     /**
-     * 向下移动选择
+     * 向下移动
      */
     moveDown() {
-        if (this.selectedIndex < this.sessions.length - 1) {
-            this.selectedIndex++;
-            this._triggerSelectionChange();
-            this._scrollToSelected();
+        if (this.currentMode === 'date') {
+            if (this.selectedDateIndex < this.dateGroups.length - 1) {
+                this.selectedDateIndex++;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
+        } else {
+            const sessions = this.getCurrentDateSessions();
+            if (this.selectedSessionIndex < sessions.length - 1) {
+                this.selectedSessionIndex++;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
         }
     }
 
@@ -83,10 +207,19 @@ class SessionManager {
      * 移动到第一项
      */
     moveToStart() {
-        if (this.sessions.length > 0) {
-            this.selectedIndex = 0;
-            this._triggerSelectionChange();
-            this._scrollToSelected();
+        if (this.currentMode === 'date') {
+            if (this.dateGroups.length > 0) {
+                this.selectedDateIndex = 0;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
+        } else {
+            const sessions = this.getCurrentDateSessions();
+            if (sessions.length > 0) {
+                this.selectedSessionIndex = 0;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
         }
     }
 
@@ -94,19 +227,53 @@ class SessionManager {
      * 移动到最后一项
      */
     moveToEnd() {
-        if (this.sessions.length > 0) {
-            this.selectedIndex = this.sessions.length - 1;
-            this._triggerSelectionChange();
-            this._scrollToSelected();
+        if (this.currentMode === 'date') {
+            if (this.dateGroups.length > 0) {
+                this.selectedDateIndex = this.dateGroups.length - 1;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
+        } else {
+            const sessions = this.getCurrentDateSessions();
+            if (sessions.length > 0) {
+                this.selectedSessionIndex = sessions.length - 1;
+                this._triggerSelectionChange();
+                this._scrollToSelected();
+            }
         }
     }
 
     /**
-     * 清除选择
+     * 选择指定日期
+     * @param {number} index - 日期索引
      */
-    clearSelection() {
-        this.selectedIndex = -1;
-        this._triggerSelectionChange();
+    selectDate(index) {
+        if (index >= 0 && index < this.dateGroups.length) {
+            this.selectedDateIndex = index;
+            this._triggerSelectionChange();
+        }
+    }
+
+    /**
+     * 选择指定会话
+     * @param {number} index - 会话索引
+     */
+    selectSession(index) {
+        const sessions = this.getCurrentDateSessions();
+        if (index >= 0 && index < sessions.length) {
+            this.selectedSessionIndex = index;
+            this._triggerSelectionChange();
+        }
+    }
+
+    /**
+     * 触发模式变化回调
+     * @private
+     */
+    _triggerModeChange() {
+        if (typeof this.onModeChange === 'function') {
+            this.onModeChange(this.currentMode);
+        }
     }
 
     /**
@@ -115,7 +282,7 @@ class SessionManager {
      */
     _triggerSelectionChange() {
         if (typeof this.onSelectionChange === 'function') {
-            this.onSelectionChange(this.getSelectedSession(), this.selectedIndex);
+            this.onSelectionChange();
         }
     }
 
@@ -124,13 +291,16 @@ class SessionManager {
      * @private
      */
     _scrollToSelected() {
-        const sessionItems = document.querySelectorAll('.session-item');
-        if (sessionItems[this.selectedIndex]) {
-            sessionItems[this.selectedIndex].scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
-            });
-        }
+        setTimeout(() => {
+            const selector = this.currentMode === 'date' ? '.date-item.active' : '.session-item.active';
+            const selectedItem = document.querySelector(selector);
+            if (selectedItem) {
+                selectedItem.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest'
+                });
+            }
+        }, 50);
     }
 
     /**
@@ -160,14 +330,19 @@ class SessionManager {
                     break;
 
                 case 'Enter':
+                case 'ArrowRight':
                     e.preventDefault();
-                    // Enter 键直接触发选择变化（已经选中了）
-                    this._triggerSelectionChange();
+                    if (this.currentMode === 'date') {
+                        this.enterSessionMode();
+                    }
                     break;
 
                 case 'Escape':
+                case 'ArrowLeft':
                     e.preventDefault();
-                    this.clearSelection();
+                    if (this.currentMode === 'session') {
+                        this.backToDateMode();
+                    }
                     break;
             }
         });

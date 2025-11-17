@@ -1,6 +1,6 @@
 /**
  * App - 应用初始化
- * 负责：加载数据、初始化组件、绑定事件
+ * 负责：加载数据、初始化组件、绑定事件、协调两级导航
  */
 
 (function() {
@@ -10,10 +10,11 @@
     const sessionListEl = document.getElementById('sessionList');
     const detailPanelEl = document.getElementById('detailPanel');
     const sessionCountEl = document.getElementById('session-count');
+    const headerEl = document.querySelector('.session-list-header');
 
     // 创建管理器和渲染器
     const sessionManager = new SessionManager();
-    const logRenderer = new LogRenderer(sessionListEl, detailPanelEl, sessionCountEl);
+    const logRenderer = new LogRenderer(sessionListEl, detailPanelEl, sessionCountEl, headerEl);
 
     /**
      * 加载日志数据
@@ -35,10 +36,10 @@
                 throw new Error('日志数据格式无效');
             }
 
-            // 设置会话数据
+            // 设置会话数据（自动分组和倒序）
             sessionManager.setSessions(data.items);
 
-            // 渲染初始状态
+            // 渲染初始状态（日期列表）
             updateUI();
 
         } catch (error) {
@@ -51,18 +52,54 @@
      * 更新 UI
      */
     function updateUI() {
-        const sessions = sessionManager.getSessions();
-        const selectedIndex = sessionManager.getSelectedIndex();
-        const selectedSession = sessionManager.getSelectedSession();
+        const currentMode = sessionManager.getCurrentMode();
 
-        // 渲染会话列表
-        logRenderer.renderSessionList(sessions, selectedIndex);
+        if (currentMode === 'date') {
+            // 日期列表模式
+            const dateGroups = sessionManager.getDateGroups();
+            const selectedDateIndex = sessionManager.getSelectedDateIndex();
 
-        // 渲染详情面板
-        logRenderer.renderDetail(selectedSession);
+            logRenderer.renderDateList(dateGroups, selectedDateIndex);
+            logRenderer.renderDetail(null); // 右侧显示空白提示
 
-        // 为会话项绑定点击事件
-        bindSessionItemEvents();
+            // 绑定日期项点击事件
+            bindDateItemEvents();
+
+        } else {
+            // 会话列表模式
+            const sessions = sessionManager.getCurrentDateSessions();
+            const selectedSessionIndex = sessionManager.getSelectedSessionIndex();
+            const selectedSession = sessionManager.getSelectedSession();
+            const dateInfo = sessionManager.getSelectedDateInfo();
+            const dateLabel = dateInfo ? dateInfo.date : '';
+
+            logRenderer.renderSessionList(sessions, selectedSessionIndex, dateLabel);
+            logRenderer.renderDetail(selectedSession);
+
+            // 绑定会话项点击事件
+            bindSessionItemEvents();
+        }
+    }
+
+    /**
+     * 绑定日期项点击事件
+     */
+    function bindDateItemEvents() {
+        const dateItems = document.querySelectorAll('.date-item');
+
+        dateItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                sessionManager.selectDate(index);
+            });
+
+            // 双击进入该日期
+            item.addEventListener('dblclick', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                sessionManager.selectDate(index);
+                sessionManager.enterSessionMode();
+            });
+        });
     }
 
     /**
@@ -83,8 +120,13 @@
      * 初始化应用
      */
     function init() {
+        // 设置模式变化回调
+        sessionManager.onModeChange = function(mode) {
+            updateUI();
+        };
+
         // 设置选择变化回调
-        sessionManager.onSelectionChange = function(session, index) {
+        sessionManager.onSelectionChange = function() {
             updateUI();
         };
 

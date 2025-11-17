@@ -1,35 +1,69 @@
 /**
  * Log Renderer - 日志渲染器
- * 负责：渲染会话列表、详情面板
+ * 负责：渲染日期列表、会话列表、详情面板
  */
 
 class LogRenderer {
-    constructor(sessionListEl, detailPanelEl, sessionCountEl) {
+    constructor(sessionListEl, detailPanelEl, sessionCountEl, headerEl) {
         this.sessionListEl = sessionListEl;
         this.detailPanelEl = detailPanelEl;
         this.sessionCountEl = sessionCountEl;
+        this.headerEl = headerEl;
+    }
+
+    /**
+     * 渲染日期列表
+     * @param {Array} dateGroups - 日期分组数组
+     * @param {number} selectedIndex - 选中的索引
+     */
+    renderDateList(dateGroups, selectedIndex = -1) {
+        if (!dateGroups || dateGroups.length === 0) {
+            this.sessionListEl.innerHTML = '<div class="empty-state">暂无日志数据</div>';
+            this.sessionCountEl.textContent = '0';
+            this.headerEl.textContent = '日期列表';
+            return;
+        }
+
+        const totalSessions = dateGroups.reduce((sum, group) => sum + group.sessions.length, 0);
+        this.sessionCountEl.textContent = totalSessions;
+        this.headerEl.textContent = '日期列表';
+
+        const html = dateGroups.map((group, index) => {
+            const isActive = index === selectedIndex ? 'active' : '';
+            const dateLabel = this._formatDateLabel(group.date);
+            return `
+                <div class="date-item ${isActive}" data-index="${index}">
+                    <div class="date-label">${this._escapeHtml(dateLabel)}</div>
+                    <div class="date-count">${group.sessions.length} 条记录</div>
+                </div>
+            `;
+        }).join('');
+
+        this.sessionListEl.innerHTML = html;
     }
 
     /**
      * 渲染会话列表
      * @param {Array} sessions - 会话数组
      * @param {number} selectedIndex - 选中的索引
+     * @param {string} dateLabel - 日期标签
      */
-    renderSessionList(sessions, selectedIndex = -1) {
+    renderSessionList(sessions, selectedIndex = -1, dateLabel = '') {
         if (!sessions || sessions.length === 0) {
-            this.sessionListEl.innerHTML = '<div class="empty-state">暂无日志数据</div>';
+            this.sessionListEl.innerHTML = '<div class="empty-state">该日期暂无日志</div>';
             this.sessionCountEl.textContent = '0';
             return;
         }
 
         this.sessionCountEl.textContent = sessions.length;
+        this.headerEl.textContent = `${dateLabel} 的日志`;
 
         const html = sessions.map((session, index) => {
             const isActive = index === selectedIndex ? 'active' : '';
+            const timeOnly = this._formatTimeOnly(session.timestamp);
             return `
                 <div class="session-item ${isActive}" data-index="${index}">
-                    <div class="session-id">${this._escapeHtml(session.sessionId)}</div>
-                    <div class="session-time">${this._formatTimestamp(session.timestamp)}</div>
+                    <div class="session-time">${this._escapeHtml(timeOnly)}</div>
                     <div class="session-message">${this._escapeHtml(session.message)}</div>
                 </div>
             `;
@@ -46,7 +80,7 @@ class LogRenderer {
         if (!session) {
             this.detailPanelEl.innerHTML = `
                 <div class="empty-state">
-                    请从左侧选择一个会话查看详情...
+                    请从左侧选择日期查看日志
                 </div>
             `;
             return;
@@ -121,7 +155,8 @@ class LogRenderer {
      */
     showLoading() {
         this.sessionListEl.innerHTML = '<div class="loading">正在加载日志数据...</div>';
-        this.detailPanelEl.innerHTML = '<div class="empty-state">请从左侧选择一个会话查看详情...</div>';
+        this.detailPanelEl.innerHTML = '<div class="empty-state">请从左侧选择日期查看日志</div>';
+        this.headerEl.textContent = '日期列表';
     }
 
     /**
@@ -134,7 +169,25 @@ class LogRenderer {
     }
 
     /**
-     * 格式化时间戳
+     * 格式化日期标签
+     * @param {string} dateKey - YYYY-MM-DD 格式
+     * @returns {string}
+     * @private
+     */
+    _formatDateLabel(dateKey) {
+        try {
+            const parts = dateKey.split('-');
+            if (parts.length === 3) {
+                return `${parts[0]}-${parts[1]}-${parts[2]}`;
+            }
+            return dateKey;
+        } catch (e) {
+            return dateKey;
+        }
+    }
+
+    /**
+     * 格式化时间戳（完整版）
      * @param {string} timestamp - ISO 8601 时间戳
      * @returns {string}
      * @private
@@ -151,6 +204,24 @@ class LogRenderer {
                 second: '2-digit',
                 hour12: false
             });
+        } catch (e) {
+            return timestamp;
+        }
+    }
+
+    /**
+     * 格式化时间（只显示时:分:秒）
+     * @param {string} timestamp - ISO 8601 时间戳
+     * @returns {string}
+     * @private
+     */
+    _formatTimeOnly(timestamp) {
+        try {
+            const date = new Date(timestamp);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
         } catch (e) {
             return timestamp;
         }
