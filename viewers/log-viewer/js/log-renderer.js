@@ -243,15 +243,20 @@ class LogRenderer {
     }
 
     /**
-     * HTML 转义（防止 XSS）
+     * HTML 转义（防止 XSS）- 优化版本
      * @param {string} str - 字符串
      * @returns {string}
      * @private
      */
     _escapeHtml(str) {
         if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        const escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return str.replace(/[&<>"']/g, char => escapeMap[char]);
     }
 }

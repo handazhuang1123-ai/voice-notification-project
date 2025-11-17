@@ -91,15 +91,26 @@
         $JsonContent = $JsonContent -replace "`r`n", "`n"
 
         # Save to file with UTF-8 (no BOM) encoding | 使用 UTF-8（无 BOM）编码保存到文件
-        # PowerShell 7+: Use utf8NoBOM; PowerShell 5.1: Use [System.IO.File]::WriteAllText
-        if ($PSVersionTable.PSVersion.Major -ge 7) {
-            # Use .NET method to ensure LF line endings are preserved
-            # 使用 .NET 方法确保保留 LF 换行符
-            [System.IO.File]::WriteAllText($OutputPath, $JsonContent, [System.Text.UTF8Encoding]::new($false))
+        # Use FileStream with shared read access to allow HTTP server to read while writing
+        # 使用带共享读取访问的 FileStream，允许 HTTP 服务器在写入时读取
+        try {
+            $Encoding = [System.Text.UTF8Encoding]::new($false)
+            $FileStream = [System.IO.File]::Open(
+                $OutputPath,
+                [System.IO.FileMode]::Create,
+                [System.IO.FileAccess]::Write,
+                [System.IO.FileShare]::Read  # Allow others to read while we write
+            )
+            $Writer = New-Object System.IO.StreamWriter($FileStream, $Encoding)
+            $Writer.Write($JsonContent)
+            $Writer.Flush()
+            $Writer.Close()
+            $FileStream.Close()
         }
-        else {
-            # PowerShell 5.1 fallback - UTF-8 without BOM
-            [System.IO.File]::WriteAllText($OutputPath, $JsonContent, [System.Text.UTF8Encoding]::new($false))
+        catch {
+            if ($Writer) { $Writer.Dispose() }
+            if ($FileStream) { $FileStream.Dispose() }
+            throw
         }
 
         Write-Verbose "Successfully converted $($Items.Count) items to viewer JSON format"

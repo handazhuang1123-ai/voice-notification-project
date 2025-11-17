@@ -1,14 +1,14 @@
 ﻿<#
 .SYNOPSIS
-    Open the Pip-Boy log viewer in default browser
-    在默认浏览器中打开 Pip-Boy 日志查看器
+    Open the Pip-Boy log viewer in default browser with real-time long-polling updates
+    在默认浏览器中打开 Pip-Boy 日志查看器，支持长轮询实时更新
 
 .DESCRIPTION
-    Exports the latest log data, starts a local HTTP server, and opens the log viewer in the default browser.
-    This is a convenient one-click solution to view voice notification logs.
+    Exports the latest log data, starts a local HTTP server with long-polling support, and opens the log viewer in the default browser.
+    This version uses long-polling for real-time log updates when the voice-unified.log file changes.
     The HTTP server is required to avoid CORS issues when loading local JSON files.
-    导出最新的日志数据，启动本地 HTTP 服务器，并在默认浏览器中打开日志查看器。
-    这是一个方便的一键查看语音通知日志的解决方案。
+    导出最新的日志数据，启动支持长轮询的本地 HTTP 服务器，并在默认浏览器中打开日志查看器。
+    此版本使用长轮询技术，当 voice-unified.log 文件变化时实时更新日志。
     HTTP 服务器用于避免加载本地 JSON 文件时的 CORS 问题。
 
 .PARAMETER SkipExport
@@ -16,13 +16,13 @@
     跳过数据导出，仅打开查看器（使用现有数据）
 
 .PARAMETER Port
-    Port number for the HTTP server (default: 8080)
-    HTTP 服务器端口号（默认：8080）
+    Port number for the HTTP server (default: 55555)
+    HTTP 服务器端口号（默认：55555）
 
 .EXAMPLE
     .\Open-LogViewer.ps1
-    Exports latest logs and opens viewer with HTTP server on port 8080
-    导出最新日志并在端口 8080 上启动 HTTP 服务器打开查看器
+    Exports latest logs and opens viewer with HTTP server on port 55555
+    导出最新日志并在端口 55555 上启动 HTTP 服务器打开查看器
 
 .EXAMPLE
     .\Open-LogViewer.ps1 -SkipExport
@@ -30,15 +30,15 @@
     打开查看器而不重新导出数据
 
 .EXAMPLE
-    .\Open-LogViewer.ps1 -Port 9090
-    Opens viewer with HTTP server on port 9090
-    在端口 9090 上启动 HTTP 服务器打开查看器
+    .\Open-LogViewer.ps1 -Port 8000
+    Opens viewer with HTTP server on port 8000
+    在端口 8000 上启动 HTTP 服务器打开查看器
 
 .NOTES
     Author: 壮爸
-    Version: 2.0
+    Version: 4.0
     Last Modified: 2025-01-17
-    Changes: Added HTTP server to avoid CORS issues
+    Changes: Replaced SSE with long-polling to fix HTTP connection blocking issues
 #>
 [CmdletBinding()]
 param(
@@ -46,11 +46,127 @@ param(
     [switch]$SkipExport,
 
     [Parameter(Mandatory = $false)]
-    [int]$Port = 8080
+    [int]$Port = 55555
 )
 
+# Configuration constants | 配置常量
+$LONG_POLL_TIMEOUT_SECONDS = 30
+$LONG_POLL_CHECK_INTERVAL_MS = 500
+$FILE_EXPORT_DEBOUNCE_SECONDS = 30
+$FILE_WRITE_DELAY_MS = 1000
+$FILE_READ_MAX_RETRIES = 3
+$FILE_READ_RETRY_DELAY_MS = 100
+$HTTP_TIMEOUT_MS = 500
+
+# Global variables for long-polling support | 长轮询支持的全局变量
+# Note: Must be global because FileSystemWatcher event handler runs in separate runspace
+# 注意：必须使用全局变量，因为FileSystemWatcher事件处理器在独立的runspace中运行
+$global:UpdatePending = $false
+$global:LastExportTime = $null
+$global:UpdateLock = New-Object System.Object
+
+# Helper functions | 辅助函数
+# Note: Must be global because they are called from FileSystemWatcher event handler (separate runspace)
+# 注意：必须是全局函数，因为它们从 FileSystemWatcher 事件处理器（独立runspace）调用
+function global:Test-LogComplete {
+    <#
+    .SYNOPSIS
+        Wait for voice notification log to complete by detecting completion marker
+        等待语音通知日志完成（通过检测完成标记）
+
+    .PARAMETER FilePath
+        Path to the log file to monitor
+        要监测的日志文件路径
+
+    .PARAMETER CompletionMarker
+        The text pattern that indicates log completion
+        表示日志完成的文本模式
+
+    .PARAMETER CheckIntervalSeconds
+        Interval in seconds between checks
+        检查间隔（秒）
+
+    .PARAMETER MaxWaitSeconds
+        Maximum time to wait for completion
+        等待完成的最大时间
+
+    .EXAMPLE
+        Test-LogComplete -FilePath "voice.log" -CompletionMarker "=== Voice Notification Completed ==="
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CompletionMarker = "=== Voice Notification Completed ===",
+
+        [Parameter(Mandatory = $false)]
+        [int]$CheckIntervalSeconds = 2,
+
+        [Parameter(Mandatory = $false)]
+        [int]$MaxWaitSeconds = 60
+    )
+
+    if (-not (Test-Path -Path $FilePath)) {
+        Write-Warning "Log file not found: $FilePath"
+        return $false
+    }
+
+    $WaitStartTime = Get-Date
+    $PreviousLineCount = 0
+
+    # Get initial line count | 获取初始行数
+    try {
+        $InitialContent = Get-Content -Path $FilePath -ErrorAction Stop
+        $PreviousLineCount = $InitialContent.Count
+        Write-Host "[$(Get-Date -Format 'HH:mm:ss')]   Initial line count: $PreviousLineCount" -ForegroundColor Gray
+    }
+    catch {
+        Write-Warning "Failed to read initial file content: $_"
+        return $false
+    }
+
+    while ($true) {
+        # Check max wait timeout | 检查最大等待超时
+        $Elapsed = ((Get-Date) - $WaitStartTime).TotalSeconds
+        if ($Elapsed -gt $MaxWaitSeconds) {
+            Write-Warning "Log completion check timed out after $MaxWaitSeconds seconds"
+            return $false
+        }
+
+        Start-Sleep -Seconds $CheckIntervalSeconds
+
+        # Read file and check for completion marker | 读取文件并检查完成标记
+        try {
+            $CurrentContent = Get-Content -Path $FilePath -ErrorAction Stop
+            $CurrentLineCount = $CurrentContent.Count
+
+            # Check if new lines were added | 检查是否添加了新行
+            if ($CurrentLineCount -gt $PreviousLineCount) {
+                # Check last 10 lines for completion marker | 检查最后 10 行是否有完成标记
+                $RecentLines = $CurrentContent | Select-Object -Last 10
+                $HasCompletionMarker = $RecentLines | Where-Object { $_ -match [regex]::Escape($CompletionMarker) }
+
+                if ($HasCompletionMarker) {
+                    Write-Host "[$(Get-Date -Format 'HH:mm:ss')]   ✓ Completion marker detected at line $CurrentLineCount" -ForegroundColor Green
+                    return $true
+                }
+
+                # Update line count | 更新行数
+                Write-Host "[$(Get-Date -Format 'HH:mm:ss')]   Lines: $PreviousLineCount -> $CurrentLineCount (waiting for completion...)" -ForegroundColor Gray
+                $PreviousLineCount = $CurrentLineCount
+            }
+        }
+        catch {
+            Write-Warning "Failed to read file content: $_"
+            # Continue waiting, file might be temporarily locked
+        }
+    }
+}
+
 try {
-    Write-Information "=== Opening Pip-Boy Log Viewer ===" -InformationAction Continue
+    Write-Information "=== Opening Pip-Boy Log Viewer (with Long-Polling support) ===" -InformationAction Continue
 
     # Get project root directory | 获取项目根目录
     # Navigate up from scripts/viewers/log-viewers/ to project root
@@ -82,6 +198,7 @@ try {
         # Run export script | 运行导出脚本
         try {
             & $ExportScriptPath -ErrorAction Stop
+            $global:LastExportTime = Get-Date
         }
         catch {
             Write-Error "Data export failed: $_"
@@ -111,6 +228,103 @@ try {
 
     Write-Information "✓ HTTP server started at http://localhost:$Port" -InformationAction Continue
 
+    # Setup FileSystemWatcher for real-time log updates | 设置 FileSystemWatcher 实现实时日志更新
+    $LogFilePath = Join-Path $ProjectRoot ".claude\hooks\extensions\voice-summary\logs\voice-unified.log"
+
+    if (Test-Path -Path $LogFilePath) {
+        $FileSystemWatcher = New-Object System.IO.FileSystemWatcher
+        $FileSystemWatcher.Path = Split-Path -Path $LogFilePath -Parent
+        $FileSystemWatcher.Filter = Split-Path -Path $LogFilePath -Leaf
+        $FileSystemWatcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::Size
+        $FileSystemWatcher.EnableRaisingEvents = $true
+
+        # Register event handler with debounce | 注册带防抖的事件处理器
+        $FileWatcherAction = {
+            param($source, $e)
+
+            # Debounce: Only trigger if configured seconds have passed since last export
+            # 防抖：仅在上次导出后配置的秒数才触发
+            $now = Get-Date
+            if ($global:LastExportTime -and (($now - $global:LastExportTime).TotalSeconds -lt $FILE_EXPORT_DEBOUNCE_SECONDS)) {
+                return
+            }
+
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] File changed detected..." -ForegroundColor Cyan
+
+            # Wait for voice notification to complete by detecting completion marker
+            # 等待语音通知完成（通过检测完成标记）
+            $LogFilePath = $e.FullPath
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Waiting for log completion marker..." -ForegroundColor Yellow
+
+            # Call with explicit values (event handler runs in separate runspace, cannot access script variables)
+            # 使用显式值调用（事件处理器运行在独立 runspace，无法访问脚本变量）
+            $IsComplete = Test-LogComplete `
+                -FilePath $LogFilePath `
+                -CompletionMarker "=== Voice Notification Completed ===" `
+                -CheckIntervalSeconds 2 `
+                -MaxWaitSeconds 60
+
+            if (-not $IsComplete) {
+                Write-Warning "Log did not complete within timeout, skipping export"
+                return
+            }
+
+            # Wait additional 2 seconds to ensure file handle is closed
+            # 额外等待 2 秒确保文件句柄关闭
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Log completed, waiting for file handle to close..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Ready to export data..." -ForegroundColor Cyan
+
+            try {
+                # Run export script | 运行导出脚本
+                $exportPath = Join-Path $PSScriptRoot "Export-LogsData.ps1"
+                & $exportPath -ErrorAction Stop | Out-Null
+
+                # Wait for file write to complete | 等待文件写入完成
+                # Increased delay to ensure file is fully written and closed
+                # 增加延迟以确保文件完全写入并关闭
+                Start-Sleep -Milliseconds $FILE_WRITE_DELAY_MS
+
+                $global:LastExportTime = Get-Date
+
+                # Thread-safe update flag set | 线程安全地设置更新标志
+                $LockAcquired = $false
+                try {
+                    $LockAcquired = [System.Threading.Monitor]::TryEnter($global:UpdateLock, 1000)
+                    if ($LockAcquired) {
+                        $global:UpdatePending = $true
+                        Write-Host "[$(Get-Date -Format 'HH:mm:ss')] ✓ Data exported, long-polling clients will be notified" -ForegroundColor Green
+                    }
+                    else {
+                        Write-Warning "Failed to acquire lock for update notification (timeout)"
+                    }
+                }
+                catch {
+                    Write-Warning "Error setting update flag: $_"
+                }
+                finally {
+                    if ($LockAcquired) {
+                        [System.Threading.Monitor]::Exit($global:UpdateLock)
+                    }
+                }
+            }
+            catch {
+                Write-Warning "Auto-export failed: $_"
+            }
+        }
+
+        $FileWatcherEvent = Register-ObjectEvent -InputObject $FileSystemWatcher `
+                                                  -EventName "Changed" `
+                                                  -Action $FileWatcherAction
+
+        Write-Information "✓ FileSystemWatcher started, monitoring: $LogFilePath" -InformationAction Continue
+    }
+    else {
+        Write-Warning "Log file not found: $LogFilePath"
+        Write-Information "FileSystemWatcher not started. Long-polling will work but without auto-update." -InformationAction Continue
+    }
+
     # Open viewer in default browser | 在默认浏览器中打开查看器
     Write-Information "`n[3/3] Opening viewer in browser..." -InformationAction Continue
     Start-Process "http://localhost:$Port/log-viewer/index.html"
@@ -122,10 +336,46 @@ try {
     Write-Information "The server will serve files from: $ViewerRootPath" -InformationAction Continue
 
     # Serve HTTP requests | 处理 HTTP 请求
+    $RequestCount = 0
     while ($HttpListener.IsListening) {
         try {
-            # Wait for request | 等待请求
-            $Context = $HttpListener.GetContext()
+            # Use async pattern to allow event processing | 使用异步模式以允许事件处理
+            # Wait for request with timeout to allow FileSystemWatcher events to fire
+            # 等待请求时使用超时，以允许 FileSystemWatcher 事件触发
+            $AsyncResult = $null
+            $Context = $null
+            $Request = $null
+            $Response = $null
+
+            try {
+                $AsyncResult = $HttpListener.BeginGetContext($null, $null)
+            }
+            catch {
+                Write-Warning "BeginGetContext error: $_"
+                Start-Sleep -Seconds 1
+                continue
+            }
+
+            $WaitResult = $AsyncResult.AsyncWaitHandle.WaitOne($HTTP_TIMEOUT_MS)
+
+            if (-not $WaitResult) {
+                # Timeout - no request received, check for pending updates
+                # 超时 - 没有收到请求，检查是否有待发送的更新
+                # Don't skip - we still need to check for SSE updates!
+                # 不要跳过 - 我们仍然需要检查 SSE 更新！
+            }
+            else {
+                # Request received, process it
+                # 收到请求，处理它
+                $RequestCount++
+
+            try {
+                $Context = $HttpListener.EndGetContext($AsyncResult)
+            }
+            catch {
+                Write-Warning "EndGetContext error: $_"
+                continue
+            }
             $Request = $Context.Request
             $Response = $Context.Response
 
@@ -135,15 +385,150 @@ try {
                 $RequestedPath = "index.html"
             }
 
-            $FilePath = Join-Path $ViewerRootPath $RequestedPath
-
             # Log request | 记录请求
-            Write-Verbose "Request: $($Request.HttpMethod) $($Request.Url.LocalPath) -> $FilePath"
+            Write-Verbose "Request: $($Request.HttpMethod) $($Request.Url.LocalPath)"
+
+            # Security: Validate path to prevent directory traversal attacks
+            # 安全：验证路径以防止目录遍历攻击
+            if ($RequestedPath -match '\.\.' -or $RequestedPath -match '[\\/]\.\.[\\/]') {
+                $Response.StatusCode = 403
+                $ErrorMessage = "403 - Forbidden: Invalid path"
+                $ErrorBytes = [System.Text.Encoding]::UTF8.GetBytes($ErrorMessage)
+                $Response.ContentLength64 = $ErrorBytes.Length
+                $Response.OutputStream.Write($ErrorBytes, 0, $ErrorBytes.Length)
+                $Response.Close()
+                Write-Warning "403 - Path traversal attempt blocked: $RequestedPath"
+                continue
+            }
+
+            # Handle long-polling endpoint | 处理长轮询端点
+            if ($RequestedPath -eq "sse/updates") {
+                Write-Verbose "Long-polling request from $($Request.RemoteEndPoint)"
+
+                # Long-polling: wait for updates with timeout
+                # 长轮询：等待更新，带超时机制
+                $WaitStartTime = Get-Date
+                $HasUpdate = $false
+
+                # Wait for update or timeout
+                # 等待更新或超时
+                $LoopIterations = 0
+                $MaxIterations = ($LONG_POLL_TIMEOUT_SECONDS * 1000) / $LONG_POLL_CHECK_INTERVAL_MS
+                while (((Get-Date) - $WaitStartTime).TotalSeconds -lt $LONG_POLL_TIMEOUT_SECONDS) {
+                    $LoopIterations++
+
+                    # Safety check: prevent infinite loop
+                    # 安全检查：防止无限循环
+                    if ($LoopIterations -gt $MaxIterations * 2) {
+                        Write-Warning "Long-polling loop exceeded max iterations, breaking"
+                        break
+                    }
+
+                    # Thread-safe check with lock | 使用锁进行线程安全检查
+                    $LockAcquired = $false
+                    try {
+                        $LockAcquired = [System.Threading.Monitor]::TryEnter($global:UpdateLock, 100)
+                        if ($LockAcquired) {
+                            if ($global:UpdatePending) {
+                                $HasUpdate = $true
+                                $global:UpdatePending = $false
+                                break
+                            }
+                        }
+                        else {
+                            Write-Verbose "Failed to acquire lock in long-polling, retrying..."
+                        }
+                    }
+                    catch {
+                        Write-Warning "Error in long-polling lock: $_"
+                    }
+                    finally {
+                        if ($LockAcquired) {
+                            [System.Threading.Monitor]::Exit($global:UpdateLock)
+                        }
+                    }
+                    Start-Sleep -Milliseconds $LONG_POLL_CHECK_INTERVAL_MS
+                }
+
+                Write-Verbose "Long-polling completed: hasUpdate=$HasUpdate, iterations=$LoopIterations"
+
+                # Prepare response | 准备响应
+                $Response.StatusCode = 200
+                $Response.ContentType = "application/json; charset=utf-8"
+                $Response.Headers.Add("Cache-Control", "no-cache")
+                $Response.Headers.Add("Access-Control-Allow-Origin", "*")
+
+                # Send response | 发送响应
+                $ResponseData = @{
+                    hasUpdate = $HasUpdate
+                    timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                }
+                $JsonResponse = $ResponseData | ConvertTo-Json -Compress
+                $ResponseBytes = [System.Text.Encoding]::UTF8.GetBytes($JsonResponse)
+
+                $Response.ContentLength64 = $ResponseBytes.Length
+                $Response.OutputStream.Write($ResponseBytes, 0, $ResponseBytes.Length)
+                $Response.Close()
+
+                Write-Verbose "Long-polling response sent: hasUpdate=$HasUpdate"
+                continue  # Skip file serving logic
+            }
+
+            $FilePath = Join-Path $ViewerRootPath $RequestedPath
 
             # Check if file exists | 检查文件是否存在
             if (Test-Path -Path $FilePath -PathType Leaf) {
-                # Read file content | 读取文件内容
-                $FileBytes = [System.IO.File]::ReadAllBytes($FilePath)
+                # Read file content with shared read access and retry logic
+                # 使用共享读取模式读取文件内容，带重试逻辑
+                $RetryCount = 0
+                $FileBytes = $null
+                $ReadSuccess = $false
+
+                while ($RetryCount -lt $FILE_READ_MAX_RETRIES -and -not $ReadSuccess) {
+                    try {
+                        $FileStream = [System.IO.File]::Open(
+                            $FilePath,
+                            [System.IO.FileMode]::Open,
+                            [System.IO.FileAccess]::Read,
+                            [System.IO.FileShare]::ReadWrite  # Allow other processes to write
+                        )
+                        $FileBytes = New-Object byte[] $FileStream.Length
+                        $FileStream.Read($FileBytes, 0, $FileStream.Length) | Out-Null
+                        $FileStream.Close()
+                        $ReadSuccess = $true
+                    }
+                    catch [System.IO.IOException] {
+                        $RetryCount++
+                        if ($RetryCount -lt $FILE_READ_MAX_RETRIES) {
+                            Write-Verbose "File read failed (attempt $RetryCount/$FILE_READ_MAX_RETRIES), retrying..."
+                            Start-Sleep -Milliseconds $FILE_READ_RETRY_DELAY_MS
+                        }
+                        else {
+                            Write-Warning "Failed to read file $FilePath after $FILE_READ_MAX_RETRIES attempts: $_"
+                            $Response.StatusCode = 503  # Service Unavailable
+                            $ErrorMessage = "503 - File is being updated, please retry"
+                            $ErrorBytes = [System.Text.Encoding]::UTF8.GetBytes($ErrorMessage)
+                            $Response.ContentLength64 = $ErrorBytes.Length
+                            $Response.OutputStream.Write($ErrorBytes, 0, $ErrorBytes.Length)
+                            $Response.Close()
+                            continue
+                        }
+                    }
+                    catch {
+                        Write-Warning "Failed to read file $FilePath : $_"
+                        $Response.StatusCode = 500
+                        $ErrorMessage = "500 - Internal Server Error"
+                        $ErrorBytes = [System.Text.Encoding]::UTF8.GetBytes($ErrorMessage)
+                        $Response.ContentLength64 = $ErrorBytes.Length
+                        $Response.OutputStream.Write($ErrorBytes, 0, $ErrorBytes.Length)
+                        $Response.Close()
+                        continue
+                    }
+                }
+
+                if (-not $ReadSuccess) {
+                    continue
+                }
 
                 # Set content type based on file extension | 根据文件扩展名设置内容类型
                 $Extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
@@ -163,6 +548,15 @@ try {
                 $Response.ContentType = $ContentType
                 $Response.ContentLength64 = $FileBytes.Length
                 $Response.StatusCode = 200
+
+                # Disable caching for JSON files to ensure fresh data on SSE updates
+                # 禁用 JSON 文件缓存，确保 SSE 更新时获取最新数据
+                if ($Extension -eq ".json") {
+                    $Response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate")
+                    $Response.Headers.Add("Pragma", "no-cache")
+                    $Response.Headers.Add("Expires", "0")
+                }
+
                 $Response.OutputStream.Write($FileBytes, 0, $FileBytes.Length)
             }
             else {
@@ -175,8 +569,12 @@ try {
                 Write-Warning "404 - File not found: $FilePath"
             }
 
-            # Close response | 关闭响应
-            $Response.Close()
+                # Close response | 关闭响应
+                $Response.Close()
+            }  # End of else block (request received)
+
+            # No need to actively push updates - long-polling clients will pick them up
+            # 无需主动推送更新 - 长轮询客户端会自动获取
         }
         catch {
             Write-Warning "Error handling request: $_"
@@ -192,6 +590,22 @@ catch {
     exit 1
 }
 finally {
+    # Clean up FileSystemWatcher | 清理 FileSystemWatcher
+    if ($FileSystemWatcher) {
+        Write-Information "`n=== Stopping FileSystemWatcher... ===" -InformationAction Continue
+        $FileSystemWatcher.EnableRaisingEvents = $false
+        $FileSystemWatcher.Dispose()
+        Write-Information "✓ FileSystemWatcher stopped" -InformationAction Continue
+    }
+
+    # Unregister event handler | 注销事件处理器
+    if ($FileWatcherEvent) {
+        Unregister-Event -SourceIdentifier $FileWatcherEvent.Name -ErrorAction SilentlyContinue
+    }
+
+    # No SSE clients to close - using long-polling instead
+    # 无需关闭 SSE 客户端 - 使用长轮询模式
+
     # Clean up HTTP listener | 清理 HTTP 监听器
     if ($HttpListener -and $HttpListener.IsListening) {
         Write-Information "`n=== Stopping HTTP server... ===" -InformationAction Continue

@@ -12,6 +12,7 @@ class SessionManager {
         this.selectedSessionIndex = -1;
         this.onModeChange = null;    // 模式切换回调
         this.onSelectionChange = null; // 选择变化回调
+        this._keydownHandler = null; // 键盘事件处理器引用（防止内存泄漏）
     }
 
     /**
@@ -304,10 +305,18 @@ class SessionManager {
     }
 
     /**
-     * 初始化键盘导航
+     * 初始化键盘导航（防止内存泄漏）
      */
     initKeyboardNavigation() {
-        document.addEventListener('keydown', (e) => {
+        // Remove existing handler to prevent memory leak
+        // 移除已存在的处理器以防止内存泄漏
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+        }
+
+        // Create new handler
+        // 创建新的处理器
+        this._keydownHandler = (e) => {
             switch (e.key) {
                 case 'ArrowUp':
                     e.preventDefault();
@@ -345,6 +354,20 @@ class SessionManager {
                     }
                     break;
             }
-        });
+        };
+
+        // Register new handler
+        // 注册新的处理器
+        document.addEventListener('keydown', this._keydownHandler);
+    }
+
+    /**
+     * 清理资源（防止内存泄漏）
+     */
+    destroy() {
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+            this._keydownHandler = null;
+        }
     }
 }
