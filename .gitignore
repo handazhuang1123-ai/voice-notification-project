@@ -114,9 +114,10 @@ obj/
 # TypeScript 构建输出（保留特定路径）
 scripts/viewers/log-viewers/node-server/dist/
 
-# NuGet packages
-# NuGet 包
+# NuGet packages and third-party binaries
+# NuGet 包和第三方二进制文件
 packages/
+Package/
 *.nuget.props
 *.nuget.targets
 
@@ -144,6 +145,9 @@ docs/.jekyll-cache/
 .claude/data/*.db
 .claude/data/*.sqlite
 .claude/data/*.sqlite3
+data/*.db
+data/*.db-shm
+data/*.db-wal
 # Keep database schema files
 # 保留数据库架构文件
 
