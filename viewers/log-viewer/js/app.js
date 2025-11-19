@@ -1,4 +1,4 @@
-/**
+﻿/**
  * App - 应用初始化
  * 负责：加载数据、初始化组件、绑定事件、协调两级导航
  */
@@ -256,10 +256,28 @@
                 // Exponential backoff on errors
                 // 错误时指数退避
                 if (consecutiveErrors > 0) {
+
                     retryDelay = Math.min(
+
                         retryDelay * CONFIG.RETRY_BACKOFF_MULTIPLIER,
+
                         CONFIG.RETRY_MAX_DELAY_MS
+
                     );
+
+                
+
+                    // Auto-reset after too many failures | 失败次数过多后自动重置
+
+                    if (consecutiveErrors > 10) {
+
+                        console.warn('⚠️ Too many failures, resetting retry delay...');
+
+                        consecutiveErrors = 0;
+
+                        retryDelay = CONFIG.RETRY_BASE_DELAY_MS;
+
+                    }
                     console.log(`⏱️ Backing off, next poll in ${retryDelay}ms (${consecutiveErrors} consecutive errors)`);
                 } else {
                     retryDelay = CONFIG.POLL_INTERVAL_MS;

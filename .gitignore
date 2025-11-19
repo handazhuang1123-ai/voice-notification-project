@@ -142,6 +142,7 @@ n.temp/
 project_files.json
 .claude/data/error-stats.json
 .claude/hooks/voice-config.json
+viewers/log-viewer/data/logs.json
 
 # Personal research reports
 # 个人研究报告

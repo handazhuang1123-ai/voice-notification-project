@@ -50,7 +50,7 @@ param(
 )
 
 # Configuration constants | 配置常量
-$LONG_POLL_TIMEOUT_SECONDS = 30
+$LONG_POLL_TIMEOUT_SECONDS = 28
 $LONG_POLL_CHECK_INTERVAL_MS = 500
 $FILE_EXPORT_DEBOUNCE_SECONDS = 30
 $FILE_WRITE_DELAY_MS = 1000
@@ -262,7 +262,7 @@ try {
                 -FilePath $LogFilePath `
                 -CompletionMarker "=== Voice Notification Completed ===" `
                 -CheckIntervalSeconds 2 `
-                -MaxWaitSeconds 60
+                -MaxWaitSeconds 25
 
             if (-not $IsComplete) {
                 Write-Warning "Log did not complete within timeout, skipping export"
@@ -418,8 +418,20 @@ try {
                     $LoopIterations++
 
                     # Safety check: prevent infinite loop
+
+                    
+
+                    # Check if client disconnected | 检查客户端是否断开
+
+                    if (-not $Response.OutputStream.CanWrite) {
+
+                        Write-Verbose "Client disconnected, exiting long-polling loop"
+
+                        break
+
+                    }
                     # 安全检查：防止无限循环
-                    if ($LoopIterations -gt $MaxIterations * 2) {
+                    if ($LoopIterations -gt ($MaxIterations * 1.1)) {
                         Write-Warning "Long-polling loop exceeded max iterations, breaking"
                         break
                     }
