@@ -9,7 +9,7 @@
     // Configuration constants | 配置常量
     const CONFIG = {
         POLL_INTERVAL_MS: 100,              // 正常轮询间隔
-        POLL_TIMEOUT_MS: 35000,             // 轮询超时（35秒）
+        POLL_TIMEOUT_MS: 45000,             // 轮询超时（45秒，给服务器30秒+网络15秒缓冲）
         POLL_SERVER_TIMEOUT_S: 30,          // 服务器端超时（30秒）
         RETRY_BASE_DELAY_MS: 100,           // 基础重试延迟
         RETRY_MAX_DELAY_MS: 30000,          // 最大重试延迟（30秒）
@@ -27,6 +27,9 @@
     // 创建管理器和渲染器
     const sessionManager = new SessionManager();
     const logRenderer = new LogRenderer(sessionListEl, detailPanelEl, sessionCountEl, headerEl);
+
+    // 设置详细信息面板元素引用（用于滚动控制）
+    sessionManager.setDetailPanelElement(detailPanelEl);
 
     // State management | 状态管理
     let isLoadingLogs = false;              // 防止并发加载
@@ -113,6 +116,7 @@
      */
     function updateUI() {
         const currentMode = sessionManager.getCurrentMode();
+        const detailContainer = document.querySelector('.log-viewer-detail-container');
 
         if (currentMode === 'date') {
             // 日期列表模式
@@ -122,10 +126,15 @@
             logRenderer.renderDateList(dateGroups, selectedDateIndex);
             logRenderer.renderDetail(null); // 右侧显示空白提示
 
+            // 移除详细信息面板焦点样式
+            if (detailContainer) {
+                detailContainer.classList.remove('focus-mode');
+            }
+
             // 绑定日期项点击事件
             bindDateItemEvents();
 
-        } else {
+        } else if (currentMode === 'session') {
             // 会话列表模式
             const sessions = sessionManager.getCurrentDateSessions();
             const selectedSessionIndex = sessionManager.getSelectedSessionIndex();
@@ -136,8 +145,20 @@
             logRenderer.renderSessionList(sessions, selectedSessionIndex, dateLabel);
             logRenderer.renderDetail(selectedSession);
 
+            // 移除详细信息面板焦点样式
+            if (detailContainer) {
+                detailContainer.classList.remove('focus-mode');
+            }
+
             // 绑定会话项点击事件
             bindSessionItemEvents();
+
+        } else if (currentMode === 'detail') {
+            // 详细信息模式（焦点在右侧详细信息面板）
+            // 不重新渲染，只添加视觉焦点效果
+            if (detailContainer) {
+                detailContainer.classList.add('focus-mode');
+            }
         }
     }
 

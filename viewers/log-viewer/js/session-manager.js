@@ -7,12 +7,21 @@ class SessionManager {
     constructor() {
         this.allSessions = [];      // 所有会话（倒序）
         this.dateGroups = [];        // 日期分组
-        this.currentMode = 'date';   // 当前模式：'date' 或 'session'
+        this.currentMode = 'date';   // 当前模式：'date', 'session', 或 'detail'
         this.selectedDateIndex = -1;
         this.selectedSessionIndex = -1;
         this.onModeChange = null;    // 模式切换回调
         this.onSelectionChange = null; // 选择变化回调
         this._keydownHandler = null; // 键盘事件处理器引用（防止内存泄漏）
+        this.detailPanelElement = null; // 详细信息面板元素引用
+    }
+
+    /**
+     * 设置详细信息面板元素引用
+     * @param {HTMLElement} element - 详细信息面板元素
+     */
+    setDetailPanelElement(element) {
+        this.detailPanelElement = element;
     }
 
     /**
@@ -166,10 +175,33 @@ class SessionManager {
     }
 
     /**
+     * 进入详细信息模式
+     */
+    enterDetailMode() {
+        if (this.currentMode === 'session' && this.getSelectedSession()) {
+            this.currentMode = 'detail';
+            this._triggerModeChange();
+        }
+    }
+
+    /**
+     * 从详细信息模式返回会话列表模式
+     */
+    backToSessionMode() {
+        if (this.currentMode === 'detail') {
+            this.currentMode = 'session';
+            this._triggerModeChange();
+        }
+    }
+
+    /**
      * 向上移动
      */
     moveUp() {
-        if (this.currentMode === 'date') {
+        if (this.currentMode === 'detail') {
+            // 在详细信息模式下，滚动详细信息面板
+            this._scrollDetailPanel(-100);
+        } else if (this.currentMode === 'date') {
             if (this.selectedDateIndex > 0) {
                 this.selectedDateIndex--;
                 this._triggerSelectionChange();
@@ -188,7 +220,10 @@ class SessionManager {
      * 向下移动
      */
     moveDown() {
-        if (this.currentMode === 'date') {
+        if (this.currentMode === 'detail') {
+            // 在详细信息模式下，滚动详细信息面板
+            this._scrollDetailPanel(100);
+        } else if (this.currentMode === 'date') {
             if (this.selectedDateIndex < this.dateGroups.length - 1) {
                 this.selectedDateIndex++;
                 this._triggerSelectionChange();
@@ -205,10 +240,32 @@ class SessionManager {
     }
 
     /**
+     * 滚动详细信息面板
+     * @param {number} delta - 滚动量（正数向下，负数向上）
+     * @private
+     */
+    _scrollDetailPanel(delta) {
+        if (this.detailPanelElement) {
+            this.detailPanelElement.scrollBy({
+                top: delta,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    /**
      * 移动到第一项
      */
     moveToStart() {
-        if (this.currentMode === 'date') {
+        if (this.currentMode === 'detail') {
+            // 在详细信息模式下，滚动到顶部
+            if (this.detailPanelElement) {
+                this.detailPanelElement.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+        } else if (this.currentMode === 'date') {
             if (this.dateGroups.length > 0) {
                 this.selectedDateIndex = 0;
                 this._triggerSelectionChange();
@@ -228,7 +285,15 @@ class SessionManager {
      * 移动到最后一项
      */
     moveToEnd() {
-        if (this.currentMode === 'date') {
+        if (this.currentMode === 'detail') {
+            // 在详细信息模式下，滚动到底部
+            if (this.detailPanelElement) {
+                this.detailPanelElement.scrollTo({
+                    top: this.detailPanelElement.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        } else if (this.currentMode === 'date') {
             if (this.dateGroups.length > 0) {
                 this.selectedDateIndex = this.dateGroups.length - 1;
                 this._triggerSelectionChange();
@@ -343,13 +408,17 @@ class SessionManager {
                     e.preventDefault();
                     if (this.currentMode === 'date') {
                         this.enterSessionMode();
+                    } else if (this.currentMode === 'session') {
+                        this.enterDetailMode();
                     }
                     break;
 
                 case 'Escape':
                 case 'ArrowLeft':
                     e.preventDefault();
-                    if (this.currentMode === 'session') {
+                    if (this.currentMode === 'detail') {
+                        this.backToSessionMode();
+                    } else if (this.currentMode === 'session') {
                         this.backToDateMode();
                     }
                     break;

@@ -1,0 +1,39 @@
+{
+  "name": "voice-log-viewer-server",
+  "version": "1.0.0",
+  "description": "Node.js server for Pip-Boy log viewer with real-time updates",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "nodemon --watch src --exec ts-node src/server.ts",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "export": "ts-node src/export-logs.ts"
+  },
+  "keywords": [
+    "log-viewer",
+    "express",
+    "typescript",
+    "long-polling"
+  ],
+  "author": "壮爸",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "chokidar": "^3.5.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "eslint": "^8.56.0",
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

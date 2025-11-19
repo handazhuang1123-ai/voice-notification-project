@@ -50,13 +50,14 @@ param(
 )
 
 # Configuration constants | 配置常量
-$LONG_POLL_TIMEOUT_SECONDS = 28
-$LONG_POLL_CHECK_INTERVAL_MS = 500
-$FILE_EXPORT_DEBOUNCE_SECONDS = 30
-$FILE_WRITE_DELAY_MS = 1000
-$FILE_READ_MAX_RETRIES = 3
-$FILE_READ_RETRY_DELAY_MS = 100
-$HTTP_TIMEOUT_MS = 500
+$LONG_POLL_TIMEOUT_SECONDS = 30     # 服务器端30秒，客户端45秒（留15秒网络缓冲）
+$LONG_POLL_CHECK_INTERVAL_MS = 500  # 长轮询检查间隔
+$FILE_EXPORT_DEBOUNCE_SECONDS = 30  # 导出防抖时间
+$FILE_WRITE_DELAY_MS = 1000         # 文件写入延迟
+$FILE_READ_MAX_RETRIES = 3          # 文件读取最大重试次数
+$FILE_READ_RETRY_DELAY_MS = 100     # 文件读取重试延迟
+$HTTP_TIMEOUT_MS = 500              # HTTP请求超时
+$LOG_COMPLETION_TIMEOUT_SECONDS = 3 # 日志完成检查超时（减少阻塞时间）
 
 # Global variables for long-polling support | 长轮询支持的全局变量
 # Note: Must be global because FileSystemWatcher event handler runs in separate runspace
@@ -258,14 +259,16 @@ try {
 
             # Call with explicit values (event handler runs in separate runspace, cannot access script variables)
             # 使用显式值调用（事件处理器运行在独立 runspace，无法访问脚本变量）
+            # Reduced timeout from 25s to 3s to minimize blocking | 超时从25秒减少到3秒以最小化阻塞
             $IsComplete = Test-LogComplete `
                 -FilePath $LogFilePath `
                 -CompletionMarker "=== Voice Notification Completed ===" `
-                -CheckIntervalSeconds 2 `
-                -MaxWaitSeconds 25
+                -CheckIntervalSeconds 1 `
+                -MaxWaitSeconds 3
 
             if (-not $IsComplete) {
-                Write-Warning "Log did not complete within timeout, skipping export"
+                Write-Host "[$(Get-Date -Format 'HH:mm:ss')] ⏭️  Log not yet complete (within 3s timeout), skipping this export" -ForegroundColor Yellow
+                Write-Host "[$(Get-Date -Format 'HH:mm:ss')] 📝 Will retry on next file change event" -ForegroundColor Gray
                 return
             }
 
@@ -417,22 +420,9 @@ try {
                 while (((Get-Date) - $WaitStartTime).TotalSeconds -lt $LONG_POLL_TIMEOUT_SECONDS) {
                     $LoopIterations++
 
-                    # Safety check: prevent infinite loop
-
-                    
-
-                    # Check if client disconnected | 检查客户端是否断开
-
-                    if (-not $Response.OutputStream.CanWrite) {
-
-                        Write-Verbose "Client disconnected, exiting long-polling loop"
-
-                        break
-
-                    }
-                    # 安全检查：防止无限循环
+                    # Safety check: prevent infinite loop | 安全检查：防止无限循环
                     if ($LoopIterations -gt ($MaxIterations * 1.1)) {
-                        Write-Warning "Long-polling loop exceeded max iterations, breaking"
+                        Write-Verbose "Long-polling loop exceeded max iterations, breaking"
                         break
                     }
 
@@ -452,37 +442,65 @@ try {
                         }
                     }
                     catch {
-                        Write-Warning "Error in long-polling lock: $_"
+                        Write-Verbose "Error in long-polling lock: $_"
+                        # Don't break, continue waiting | 不要中断，继续等待
                     }
                     finally {
                         if ($LockAcquired) {
-                            [System.Threading.Monitor]::Exit($global:UpdateLock)
+                            try {
+                                [System.Threading.Monitor]::Exit($global:UpdateLock)
+                            }
+                            catch {
+                                Write-Verbose "Error releasing lock: $_"
+                            }
                         }
                     }
-                    Start-Sleep -Milliseconds $LONG_POLL_CHECK_INTERVAL_MS
+
+                    # Sleep with error handling | 休眠时进行错误处理
+                    try {
+                        Start-Sleep -Milliseconds $LONG_POLL_CHECK_INTERVAL_MS
+                    }
+                    catch {
+                        Write-Verbose "Sleep interrupted: $_"
+                        break  # If sleep fails, exit loop | 如果休眠失败，退出循环
+                    }
                 }
 
                 Write-Verbose "Long-polling completed: hasUpdate=$HasUpdate, iterations=$LoopIterations"
 
-                # Prepare response | 准备响应
-                $Response.StatusCode = 200
-                $Response.ContentType = "application/json; charset=utf-8"
-                $Response.Headers.Add("Cache-Control", "no-cache")
-                $Response.Headers.Add("Access-Control-Allow-Origin", "*")
+                # Prepare and send response with error handling | 准备并发送响应，带错误处理
+                try {
+                    $Response.StatusCode = 200
+                    $Response.ContentType = "application/json; charset=utf-8"
+                    $Response.Headers.Add("Cache-Control", "no-cache")
+                    $Response.Headers.Add("Access-Control-Allow-Origin", "*")
 
-                # Send response | 发送响应
-                $ResponseData = @{
-                    hasUpdate = $HasUpdate
-                    timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    # Send response | 发送响应
+                    $ResponseData = @{
+                        hasUpdate = $HasUpdate
+                        timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                    }
+                    $JsonResponse = $ResponseData | ConvertTo-Json -Compress
+                    $ResponseBytes = [System.Text.Encoding]::UTF8.GetBytes($JsonResponse)
+
+                    $Response.ContentLength64 = $ResponseBytes.Length
+                    $Response.OutputStream.Write($ResponseBytes, 0, $ResponseBytes.Length)
+                    $Response.Close()
+
+                    Write-Verbose "Long-polling response sent: hasUpdate=$HasUpdate"
                 }
-                $JsonResponse = $ResponseData | ConvertTo-Json -Compress
-                $ResponseBytes = [System.Text.Encoding]::UTF8.GetBytes($JsonResponse)
-
-                $Response.ContentLength64 = $ResponseBytes.Length
-                $Response.OutputStream.Write($ResponseBytes, 0, $ResponseBytes.Length)
-                $Response.Close()
-
-                Write-Verbose "Long-polling response sent: hasUpdate=$HasUpdate"
+                catch {
+                    Write-Verbose "Failed to send long-polling response (client may have disconnected): $_"
+                    # Close response if still open | 如果响应仍然打开，关闭它
+                    try {
+                        if ($Response) {
+                            $Response.Close()
+                        }
+                    }
+                    catch {
+                        # Ignore close errors | 忽略关闭错误
+                    }
+                }
                 continue  # Skip file serving logic
             }
 

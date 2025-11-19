@@ -21,6 +21,10 @@
 # JSON files (use LF)
 # JSON 文件（使用 LF）
 *.json text eol=lf
+package.json text eol=lf
+package-lock.json text eol=lf linguist-generated
+tsconfig.json text eol=lf
+.eslintrc.json text eol=lf
 
 # YAML files (use LF)
 # YAML 文件（使用 LF）
@@ -69,11 +73,14 @@
 # Python
 *.py text eol=lf
 
-# JavaScript/TypeScript
+# JavaScript/TypeScript (use LF)
+# JavaScript/TypeScript（使用 LF）
 *.js text eol=lf
 *.ts text eol=lf
 *.jsx text eol=lf
 *.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
 
 # ============================================
 # Binary files (disable text processing)
@@ -155,12 +162,22 @@
 # 排除某些目录不计入语言统计
 docs/** linguist-documentation
 tests/** linguist-vendored=false
+scripts/viewers/log-viewers/node-server/node_modules/** linguist-vendored
+scripts/viewers/log-viewers/archived/** linguist-vendored
 
 # Mark PowerShell as primary language
 # 标记 PowerShell 为主要语言
 *.ps1 linguist-language=PowerShell
 *.psm1 linguist-language=PowerShell
 *.psd1 linguist-language=PowerShell
+
+# Mark TypeScript as language (for node-server)
+# 标记 TypeScript 为语言（用于 node-server）
+*.ts linguist-language=TypeScript
+
+# Exclude generated files from language stats
+# 排除生成文件不计入语言统计
+scripts/viewers/log-viewers/node-server/dist/** linguist-generated
 
 # ============================================
 # Export ignore (exclude when using git archive)

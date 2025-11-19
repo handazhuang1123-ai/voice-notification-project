@@ -23,6 +23,11 @@ testOutput/
 logs/
 temp/
 
+# Keep specific log directories (structure, not content)
+# 保留特定日志目录（结构，非内容）
+!.claude/hooks/extensions/voice-summary/logs/
+.claude/hooks/extensions/voice-summary/logs/*.log
+
 # Configuration and sensitive information
 # 配置和敏感信息
 config.local.ps1
@@ -59,7 +64,8 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
-*.lnk
+# *.lnk  # Commented out: some shortcuts should be committed
+# 已注释：某些快捷方式应该提交（如错误监控面板.lnk）
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -68,12 +74,20 @@ $RECYCLE.BIN/
 .directory
 .Trash-*
 
-# Node.js
+# Node.js and TypeScript
+# Node.js 和 TypeScript
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 package-lock.json
+*.tsbuildinfo
+*.d.ts.map
+.npm/
+.eslintcache
+.tscache/
 
 # Python
 __pycache__/
@@ -95,6 +109,10 @@ obj/
 *.dll
 *.exe
 *.nupkg
+
+# TypeScript build output (keep specific paths)
+# TypeScript 构建输出（保留特定路径）
+scripts/viewers/log-viewers/node-server/dist/
 
 # NuGet packages
 # NuGet 包
@@ -121,11 +139,13 @@ docs/.jekyll-cache/
 *.7z
 *.rar
 
-# Database files
-# 数据库文件
-*.db
-*.sqlite
-*.sqlite3
+# Database files (runtime data, not schema)
+# 数据库文件（运行时数据，非架构）
+.claude/data/*.db
+.claude/data/*.sqlite
+.claude/data/*.sqlite3
+# Keep database schema files
+# 保留数据库架构文件
 
 # Project specific ignore
 # 项目特定忽略

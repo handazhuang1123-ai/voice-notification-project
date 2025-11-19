@@ -1,0 +1,28 @@
+{
+  "server": {
+    "port": 55555,
+    "host": "localhost"
+  },
+  "paths": {
+    "viewerRoot": "../../../../viewers",
+    "logFile": "../../../../.claude/hooks/extensions/voice-summary/logs/voice-unified.log",
+    "outputJson": "../../../../viewers/log-viewer/data/logs.json"
+  },
+  "longPolling": {
+    "timeoutSeconds": 30,
+    "checkIntervalMs": 500
+  },
+  "fileWatcher": {
+    "debounceSeconds": 30,
+    "writeDelayMs": 1000,
+    "completionTimeoutSeconds": 60,
+    "completionMarker": "=== Voice Notification Completed ===",
+    "pollingIntervalMs": 2000,
+    "usePolling": true
+  },
+  "http": {
+    "timeoutMs": 500,
+    "maxRetries": 3,
+    "retryDelayMs": 100
+  }
+}
