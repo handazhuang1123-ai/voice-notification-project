@@ -26,11 +26,11 @@ class SessionManager {
 
     /**
      * 设置会话数据并分组
-     * @param {Array} sessions - 会话数组
+     * @param {Array} sessions - 会话数组（后端已按时间戳倒序，最新的在前）
      */
     setSessions(sessions) {
-        // 倒序排列（最新的在前）
-        this.allSessions = [...sessions].reverse();
+        // 后端返回的数据已经是倒序（最新的在前），直接使用
+        this.allSessions = [...sessions];
 
         // 按日期分组
         this._groupByDate();
@@ -39,6 +39,25 @@ class SessionManager {
         if (this.dateGroups.length > 0) {
             this.selectedDateIndex = 0;
         }
+    }
+
+    /**
+     * 追加会话数据（用于懒加载）
+     * @param {Array} newSessions - 新的会话数组（后端已按时间戳倒序）
+     */
+    appendSessions(newSessions) {
+        if (!newSessions || newSessions.length === 0) {
+            return;
+        }
+
+        // 追加新会话（后端返回的数据已经是倒序，直接追加到末尾）
+        this.allSessions = this.allSessions.concat([...newSessions]);
+
+        // 重新分组
+        this._groupByDate();
+
+        // 触发选择变化回调以更新 UI
+        this._triggerSelectionChange();
     }
 
     /**

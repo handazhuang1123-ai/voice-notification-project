@@ -11,6 +11,7 @@ import { exec } from 'child_process';
 import { getConfig } from './config';
 import { exportLogs } from './export-logs';
 import { FileWatcher } from './file-watcher';
+import { parseLogsWithPagination } from './log-parser';
 
 /**
  * Long-polling client interface
@@ -79,6 +80,38 @@ class LogViewerServer {
      * 设置 Express 路由
      */
     private setupRoutes(): void {
+        // Pagination API endpoint | 分页 API 端点
+        this.app.get('/api/logs', (req: Request, res: Response) => {
+            try {
+                // Parse query parameters | 解析查询参数
+                const page = parseInt(req.query.page as string) || 1;
+                const limit = parseInt(req.query.limit as string) || 50;
+
+                console.log(`[API] /api/logs - page=${page}, limit=${limit}`);
+
+                // Get paginated logs | 获取分页日志
+                const result = parseLogsWithPagination(this.config.paths.logFile, {
+                    page,
+                    limit
+                });
+
+                // Return JSON response | 返回 JSON 响应
+                res.json({
+                    dataType: 'logs',
+                    generatedAt: new Date().toISOString(),
+                    ...result
+                });
+
+                console.log(`[API] ✓ Returned ${result.items.length} items for page ${page}`);
+            } catch (error) {
+                console.error('[API] Error handling /api/logs:', error);
+                res.status(500).json({
+                    error: 'Internal server error',
+                    message: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
+        });
+
         // Long-polling endpoint | 长轮询端点
         this.app.get('/sse/updates', (req: Request, res: Response) => {
             this.handleLongPoll(req, res);

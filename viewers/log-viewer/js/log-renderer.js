@@ -18,15 +18,15 @@ class LogRenderer {
      */
     renderDateList(dateGroups, selectedIndex = -1) {
         if (!dateGroups || dateGroups.length === 0) {
-            this.sessionListEl.innerHTML = '<div class="empty-state">暂无日志数据</div>';
+            this.sessionListEl.innerHTML = '<div class="empty-state">NO LOG DATA AVAILABLE</div>';
             this.sessionCountEl.textContent = '0';
-            this.headerEl.textContent = '日期列表';
+            this.headerEl.textContent = 'DATE LIST';
             return;
         }
 
         const totalSessions = dateGroups.reduce((sum, group) => sum + group.sessions.length, 0);
         this.sessionCountEl.textContent = totalSessions;
-        this.headerEl.textContent = '日期列表';
+        this.headerEl.textContent = 'DATE LIST';
 
         const html = dateGroups.map((group, index) => {
             const isActive = index === selectedIndex ? 'active' : '';
@@ -50,13 +50,13 @@ class LogRenderer {
      */
     renderSessionList(sessions, selectedIndex = -1, dateLabel = '') {
         if (!sessions || sessions.length === 0) {
-            this.sessionListEl.innerHTML = '<div class="empty-state">该日期暂无日志</div>';
+            this.sessionListEl.innerHTML = '<div class="empty-state">NO LOGS FOR THIS DATE</div>';
             this.sessionCountEl.textContent = '0';
             return;
         }
 
         this.sessionCountEl.textContent = sessions.length;
-        this.headerEl.textContent = `${dateLabel} 的日志`;
+        this.headerEl.textContent = `LOGS - ${dateLabel}`;
 
         const html = sessions.map((session, index) => {
             const isActive = index === selectedIndex ? 'active' : '';
@@ -80,7 +80,7 @@ class LogRenderer {
         if (!session) {
             this.detailPanelEl.innerHTML = `
                 <div class="empty-state">
-                    请从左侧选择日期查看日志
+                    SELECT A DATE FROM THE LEFT PANEL TO VIEW LOGS
                 </div>
             `;
             return;
@@ -90,63 +90,58 @@ class LogRenderer {
 
         this.detailPanelEl.innerHTML = `
             <div class="detail-section">
-                <h3>基本信息</h3>
+                <h3>BASIC INFO</h3>
                 <div class="detail-item">
-                    <span class="detail-label">会话 ID:</span>
+                    <span class="detail-label">SESSION ID:</span>
                     <span class="detail-value">${this._escapeHtml(session.sessionId)}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">时间戳:</span>
+                    <span class="detail-label">TIMESTAMP:</span>
                     <span class="detail-value">${this._formatTimestamp(session.timestamp)}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">消息:</span>
-                    <span class="detail-value">${this._escapeHtml(session.message)}</span>
+                    <span class="detail-label">MESSAGE:</span>
+                    <span class="detail-value">${this._escapeHtml(session.message).replace(/\n/g, '<br>')}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">执行时长:</span>
-                    <span class="detail-value">${session.duration} 秒</span>
+                    <span class="detail-label">DURATION:</span>
+                    <span class="detail-value">${session.duration} SEC</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">状态:</span>
+                    <span class="detail-label">STATUS:</span>
                     <span class="detail-value ${statusClass}">${session.status}</span>
                 </div>
             </div>
 
             ${session.details ? `
             <div class="detail-section">
-                <h3>详细信息</h3>
+                <h3>DETAILS</h3>
                 ${session.details.userMessage ? `
                 <div class="detail-item">
-                    <span class="detail-label">用户消息:</span>
+                    <span class="detail-label">USER MESSAGE:</span>
                     <span class="detail-value">${this._escapeHtml(session.details.userMessage)}</span>
                 </div>
                 ` : ''}
                 ${session.details.claudeReply ? `
                 <div class="detail-item">
-                    <span class="detail-label">Claude 回复:</span>
+                    <span class="detail-label">CLAUDE REPLY:</span>
                     <span class="detail-value">${this._escapeHtml(session.details.claudeReply)}</span>
                 </div>
                 ` : ''}
                 ${session.details.ollamaModel ? `
                 <div class="detail-item">
-                    <span class="detail-label">Ollama 模型:</span>
+                    <span class="detail-label">OLLAMA MODEL:</span>
                     <span class="detail-value">${this._escapeHtml(session.details.ollamaModel)}</span>
                 </div>
                 ` : ''}
                 ${session.details.voice ? `
                 <div class="detail-item">
-                    <span class="detail-label">语音:</span>
+                    <span class="detail-label">VOICE:</span>
                     <span class="detail-value">${this._escapeHtml(session.details.voice)}</span>
                 </div>
                 ` : ''}
             </div>
             ` : ''}
-
-            <div class="detail-section">
-                <h3>完整数据 (JSON)</h3>
-                <pre>${JSON.stringify(session, null, 2)}</pre>
-            </div>
         `;
     }
 
@@ -154,9 +149,9 @@ class LogRenderer {
      * 显示加载状态
      */
     showLoading() {
-        this.sessionListEl.innerHTML = '<div class="loading">正在加载日志数据...</div>';
-        this.detailPanelEl.innerHTML = '<div class="empty-state">请从左侧选择日期查看日志</div>';
-        this.headerEl.textContent = '日期列表';
+        this.sessionListEl.innerHTML = '<div class="loading">LOADING LOG DATA...</div>';
+        this.detailPanelEl.innerHTML = '<div class="empty-state">SELECT A DATE FROM THE LEFT PANEL TO VIEW LOGS</div>';
+        this.headerEl.textContent = 'DATE LIST';
     }
 
     /**
@@ -164,8 +159,8 @@ class LogRenderer {
      * @param {string} message - 错误消息
      */
     showError(message) {
-        this.sessionListEl.innerHTML = `<div class="error-message">错误: ${this._escapeHtml(message)}</div>`;
-        this.detailPanelEl.innerHTML = `<div class="error-message">无法加载日志数据</div>`;
+        this.sessionListEl.innerHTML = `<div class="error-message">ERROR: ${this._escapeHtml(message)}</div>`;
+        this.detailPanelEl.innerHTML = `<div class="error-message">FAILED TO LOAD LOG DATA</div>`;
     }
 
     /**
