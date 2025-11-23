@@ -17,7 +17,7 @@
 - [x] **需求调研** - 已完成（3份研究报告）
 - [x] **技术方案设计** - 已完成（技术栈方案文档）
 - [x] **环境清理** - 已完成（清除PowerShell VectorMemory相关文件）
-- [ ] **Phase 1: 基础设施搭建** - 🔄 准备开始
+- [x] **Phase 1: 基础设施搭建** - ✅ 已完成（2025-11-23）
 - [ ] **Phase 2: 历史画像问卷** - ⏳ 未开始
 - [ ] **Phase 3: 评分反馈机制** - ⏳ 未开始
 - [ ] **Phase 4: 项目总结模块** - ⏳ 未开始
@@ -26,7 +26,7 @@
 
 ### 当前阶段: Phase 1 (基础设施搭建)
 
-**状态**: 🔄 准备开始
+**状态**: ✅ **已完成** (2025-11-23)
 
 **已完成**:
 - ✅ 确定嵌入模型：Qwen3-Embedding-0.6B (替代nomic-embed-text)
@@ -34,15 +34,28 @@
 - ✅ 设计混合检索架构
 - ✅ 确定双数据库方案（memory.db保留，新建rag-database.db）
 - ✅ 清理PowerShell VectorMemory相关文件（9个文件）
+- ✅ 创建目录结构（services/, scripts/, tests/）
+- ✅ 安装Node.js依赖（better-sqlite3, axios, express, wink-bm25-text-search）
+- ✅ 部署Qwen3嵌入模型（qwen3-embedding:0.6b）
+- ✅ 创建数据库并初始化表结构（6 个表 + 索引）
+- ✅ 实现嵌入服务 (embedding-service.js)
+- ✅ 实现混合检索引擎 (hybrid-retrieval.js) - 已适配独立 keywords 表
+- ✅ 编写测试脚本验证核心功能 (tests/test-retrieval.js)
+- ✅ 所有测试通过验证
 
-**待办**:
-- [ ] 创建目录结构（services/, scripts/, tests/）
-- [ ] 安装Node.js依赖
-- [ ] 部署Qwen3嵌入模型
-- [ ] 创建数据库并初始化表结构
-- [ ] 实现嵌入服务 (embedding-service.js)
-- [ ] 实现混合检索引擎 (hybrid-retrieval.js)
-- [ ] 编写测试脚本验证核心功能
+**核心产出**:
+```
+voice-notification-project/
+├── data/
+│   └── rag-database.db          ✅ 已创建（5条测试数据 + 20个关键词）
+├── services/
+│   ├── embedding-service.js     ✅ 已实现
+│   └── hybrid-retrieval.js      ✅ 已实现（适配 knowledge_keywords 表）
+├── scripts/
+│   └── init-database.js         ✅ 已实现
+└── tests/
+    └── test-retrieval.js        ✅ 已实现（5个测试场景全部通过）
+```
 
 ---
 
@@ -421,6 +434,17 @@ module.exports = EmbeddingService;
 
 #### 1.3.2 混合检索引擎
 
+> **⚠️ 重要适配说明（2025-11-23 更新）**
+>
+> 实际实现中，数据库使用了**独立的 `knowledge_keywords` 表**（而非文档原设计的 JSON 字段）。
+> 这是更优的设计，提高了关键词检索效率和数据规范性。
+>
+> **核心变更**：
+> - ❌ 原设计：`knowledge_base.keywords` 字段存储 JSON 字符串
+> - ✅ 实际实现：独立的 `knowledge_keywords` 表 + JOIN 查询
+> - ✅ 代码已适配：`initBM25Index()` 和 `vectorSearch()` 使用 GROUP_CONCAT 聚合关键词
+> - ✅ 健壮性增强：BM25 至少需要 3 条文档，不足时自动禁用关键词检索
+
 **创建文件**: `services/hybrid-retrieval.js`
 
 ```javascript
@@ -728,24 +752,65 @@ voice-notification-project/
 
 ---
 
-## 🔄 Phase 2: 历史画像问卷 (预计2-3天)
+## 🔄 Phase 2: 历史画像问卷
 
-### 目标
+### 两步走实施策略（2025-11-23 确定）
+
+基于开发效率和功能验证考虑，Phase 2 采用**渐进式实施**策略：
+
+#### **Phase 2.1: 基础问卷（核心功能）** - 预计 1 天
+**目标**：实现问卷填写和数据存储的完整流程，暂不实施关键词提取。
+
+**功能范围**：
+- ✅ 8 个核心问题的问卷页面（Pip-Boy 主题）
+- ✅ 后端 HTTP 服务器（Express）
+- ✅ 问卷提交 API（`POST /api/rag/profile`）
+- ✅ 嵌入向量生成（Qwen3-Embedding）
+- ✅ 数据存储（user_profile 表 + knowledge_base L1 层）
+- ⚠️ **关键词字段留空**（knowledge_keywords 表暂无数据）
+
+**优势**：
+- 快速验证核心流程
+- 先体验纯向量检索效果
+- 降低初期开发复杂度
+
+---
+
+#### **Phase 2.2: 关键词增强（可选优化）** - 预计 0.5 天
+**目标**：为已有问卷数据补充关键词，启用混合检索。
+
+**功能范围**：
+- ✅ 实施关键词提取服务（Ollama + Qwen 提示词）
+- ✅ 修改问卷提交 API（增加关键词提取步骤）
+- ✅ 批量处理脚本（为已有数据补充关键词）
+- ✅ 启用 BM25 关键词检索
+
+**实施时机**：
+- 在 Phase 2.1 完成并验证后
+- 当知识库有一定数据量时（10+ 条）
+- 根据向量检索效果决定是否需要
+
+> 💡 **设计原则**：关键词提取是增强功能，不影响核心流程。即使不实施 Phase 2.2，系统仍可通过纯向量检索正常工作。
+
+---
+
+### Phase 2.1 详细实施方案
+
+#### 目标
 实现独立的历史画像问卷页面，收集8个核心问题的答案并存入知识库L1层。
 
-### 未来扩展方向（深度画像功能）
+#### 未来扩展方向（深度画像功能）
 
-**当前版本**（Phase 2 基础实现）：
+**当前版本**（Phase 2.1 基础实现）：
 - 用户直接填写8个问题的答案
 - 答案直接存入 user_profile 表和 knowledge_base（L1层）
+- 关键词字段留空（Phase 2.2 补充）
 
 **未来扩展版**（具体实施时详细设计）：
 - **AI深度追问**：基于用户初步回答，使用苏格拉底提问法进行多轮追问
 - **深度剖析**：大模型生成深度总结和个性分析
 - **用户认可机制**：AI生成的分析需用户审核认可后才存入L1层
 - **数据库扩展**：通过 ALTER TABLE 添加字段（initial_answer, followup_conversation, ai_analysis, analysis_approved, final_summary）
-
-> 💡 现阶段保持简单实现，扩展功能在实施时根据实际需求详细设计
 
 ### 2.1 前端页面实现
 
@@ -946,6 +1011,34 @@ SELECT * FROM knowledge_base ORDER BY created_at DESC LIMIT 10;
 - 📋 开始执行 Phase 1: 基础设施搭建
 - 创建目录结构（services/, scripts/, tests/）
 - 安装Node.js依赖并部署Qwen3模型
+
+---
+
+### 2025-11-23
+
+**Phase 1.3-1.4 核心服务实现与测试**:
+- ✅ 创建 `services/embedding-service.js`（嵌入向量生成服务）
+- ✅ 创建 `services/hybrid-retrieval.js`（混合检索引擎）
+  - ✅ 适配独立 `knowledge_keywords` 表结构（JOIN 查询 + GROUP_CONCAT）
+  - ✅ 增强健壮性：BM25 至少需要 3 条文档，不足时自动禁用
+- ✅ 创建 `tests/test-retrieval.js`（检索功能测试脚本）
+- ✅ 优化 `scripts/init-database.js`（测试数据从 2 条增加到 5 条）
+- ✅ 运行完整测试验证：
+  - ✅ Qwen3 嵌入模型调用正常（768 维向量）
+  - ✅ 向量相似度计算正确（余弦相似度）
+  - ✅ BM25 关键词检索正常工作
+  - ✅ RRF 融合算法正确执行
+  - ✅ 分层权重正确应用（L1=5.0, L3=3.5, L5=2.5）
+  - ✅ 独立 knowledge_keywords 表适配成功
+
+**数据库优化说明**:
+- 使用独立的 `knowledge_keywords` 表替代 JSON 字段
+- 提高了关键词检索效率和数据规范性
+- 代码已完全适配新结构
+
+**下一步**:
+- 📋 Phase 2: 实现历史画像问卷（8 个核心问题）
+- 创建问卷页面和 API 接口
 
 ### （后续更新）
 每次工作会话结束后，在此记录完成的任务和遇到的问题。
