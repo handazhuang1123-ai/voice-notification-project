@@ -1,0 +1,26 @@
+{
+  "name": "voice-notification-project",
+  "version": "1.0.0",
+  "description": "多功能集成实验场 - RAG知识库核心服务",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "init-db": "node scripts/init-database.js",
+    "test": "node tests/test-retrieval.js",
+    "dev": "node services/server.js"
+  },
+  "keywords": [
+    "RAG",
+    "knowledge-base",
+    "embedding",
+    "retrieval"
+  ],
+  "author": "壮爸",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "better-sqlite3": "^12.4.6",
+    "express": "^5.1.0",
+    "wink-bm25-text-search": "^3.1.2"
+  }
+}
