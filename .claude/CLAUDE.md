@@ -128,6 +128,30 @@ if (-not $ApiKey) {
 
 ---
 
+## 端口管理规范
+
+### 标准端口分配
+- **主入口门户**: 3000
+- **个人画像系统**: 3002
+- **日志查看器**: 55555
+
+### 开发注意事项
+
+1. **不要随意更改端口**
+   - Vite 看到端口被占用会自动尝试下一个端口，但这会导致混乱
+   - 使用 `strictPort: true` 强制使用指定端口
+
+2. **先检查占用**
+   - 如果端口被占用，先用 `netstat` 查看是什么程序占用
+   - Windows: `netstat -aon | findstr :端口号`
+   - 查看进程名: `wmic process where processid=PID get name`
+
+3. **正确清理**
+   - 开发完成后要正确关闭服务器，避免进程残留
+   - 清理残留进程: `wmic process where processid=PID delete`
+
+---
+
 ## 提交规范
 
 使用 Conventional Commits 格式（通过 GitHub MCP 提交时使用）：
