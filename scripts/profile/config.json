@@ -1,0 +1,28 @@
+{
+  "name": "Phase 2.1 个人画像问卷系统",
+  "version": "1.0.0",
+  "description": "基于三阶段访谈框架的个人历史画像深度采集系统",
+  "author": "壮爸",
+  "port": 3002,
+  "database": {
+    "path": "../../data/profile/profile.db",
+    "tables": 10
+  },
+  "dependencies": {
+    "ollama-service": "./ollama-service.js",
+    "embedding-service": "../../embedding-service.js"
+  },
+  "models": {
+    "default": "qwen2.5:14b-instruct",
+    "fallback": "qwen2.5:7b-instruct"
+  },
+  "migration": {
+    "canMoveToStandalone": true,
+    "requiredFiles": [
+      "scripts/profile/*",
+      "services/profile/*",
+      "viewers/user-profile/*",
+      "data/profile/*"
+    ]
+  }
+}

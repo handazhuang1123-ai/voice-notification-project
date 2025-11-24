@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深度访谈 - Pip-Boy</title>
+
+    <!-- Pip-Boy 主题样式 -->
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-colors.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-base.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-crt.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-components.css">
+
+    <style>
+        /* 访谈特定样式 */
+        .interview-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 阶段指示器 */
+        .phase-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--pip-boy-black);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+        }
+
+        .phase-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        .phase-item::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--pip-boy-green-dim);
+        }
+
+        .phase-item:last-child::after {
+            display: none;
+        }
+
+        .phase-item.active {
+            color: var(--pip-boy-green-bright);
+            text-shadow: 0 0 10px var(--pip-boy-glow-strong);
+        }
+
+        .phase-item.completed {
+            color: var(--pip-boy-green);
+        }
+
+        .phase-name {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .phase-time {
+            font-size: 0.8em;
+            color: var(--pip-boy-green-dim);
+        }
+
+        /* 会话信息 */
+        .session-info {
+            background: var(--pip-boy-black);
+            border: 1px solid var(--pip-boy-green);
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .question-preview {
+            flex: 1;
+            font-size: 0.9em;
+            color: var(--pip-boy-green-dim);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 20px;
+        }
+
+        /* 对话历史区域 */
+        .conversation-history {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .conversation-history::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .conversation-history::-webkit-scrollbar-track {
+            background: var(--pip-boy-black);
+        }
+
+        .conversation-history::-webkit-scrollbar-thumb {
+            background: var(--pip-boy-green);
+            border-radius: 5px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-ai {
+            background: rgba(74, 246, 38, 0.05);
+            border-left: 3px solid var(--pip-boy-green);
+        }
+
+        .message-user {
+            background: rgba(74, 246, 38, 0.1);
+            border-left: 3px solid var(--pip-boy-green-bright);
+        }
+
+        .message-role {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .message-content {
+            line-height: 1.6;
+        }
+
+        .message-timestamp {
+            font-size: 0.8em;
+            color: var(--pip-boy-green-dim);
+            margin-top: 5px;
+        }
+
+        /* 当前追问区域 */
+        .current-question {
+            background: var(--pip-boy-black);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px var(--pip-boy-glow-strong);
+        }
+
+        .current-question-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: var(--pip-boy-green-bright);
+        }
+
+        .dice-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--pip-boy-green);
+            color: var(--pip-boy-black);
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        /* 回答输入区 */
+        .answer-input-area {
+            margin-bottom: 20px;
+        }
+
+        .answer-textarea {
+            width: 100%;
+            min-height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--pip-boy-green);
+            color: var(--pip-boy-green-bright);
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            padding: 15px;
+            resize: vertical;
+        }
+
+        .answer-textarea:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--pip-boy-glow-mid);
+        }
+
+        /* 操作按钮 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .pip-boy-button {
+            background: var(--pip-boy-black);
+            color: var(--pip-boy-green);
+            border: 2px solid var(--pip-boy-green);
+            padding: 12px 24px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            flex: 1;
+        }
+
+        .pip-boy-button:hover {
+            background: var(--pip-boy-green);
+            color: var(--pip-boy-black);
+            box-shadow: 0 0 15px var(--pip-boy-glow-strong);
+        }
+
+        .pip-boy-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pip-boy-button.primary {
+            background: rgba(74, 246, 38, 0.1);
+        }
+
+        .pip-boy-button.danger {
+            border-color: #ff6666;
+            color: #ff6666;
+        }
+
+        .pip-boy-button.danger:hover {
+            background: #ff6666;
+            color: var(--pip-boy-black);
+        }
+
+        /* 加载状态 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: var(--pip-boy-green);
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--pip-boy-green-dim);
+            border-top: 3px solid var(--pip-boy-green);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 状态提示 */
+        .status-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--pip-boy-black);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+            color: var(--pip-boy-green);
+            display: none;
+            z-index: 1001;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .status-toast.show {
+            display: block;
+        }
+
+        .status-toast.error {
+            border-color: #ff6666;
+            color: #ff6666;
+        }
+    </style>
+</head>
+<body class="pip-boy-body">
+    <div class="pip-boy-container">
+        <!-- 头部 -->
+        <div class="pip-boy-header">
+            <div class="pip-boy-title">ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM</div>
+            <div class="pip-boy-subtitle">个人历史画像深度采集系统 - 五阶段深度访谈</div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="interview-container">
+            <!-- 阶段指示器 -->
+            <div class="phase-indicator" id="phaseIndicator">
+                <div class="phase-item" data-phase="opening">
+                    <div class="phase-name">开场破冰</div>
+                    <div class="phase-time">5分钟</div>
+                </div>
+                <div class="phase-item" data-phase="narrative">
+                    <div class="phase-name">叙事探索</div>
+                    <div class="phase-time">30分钟</div>
+                </div>
+                <div class="phase-item" data-phase="grow">
+                    <div class="phase-name">GROW结构化</div>
+                    <div class="phase-time">20分钟</div>
+                </div>
+                <div class="phase-item" data-phase="values">
+                    <div class="phase-name">价值澄清</div>
+                    <div class="phase-time">15分钟</div>
+                </div>
+                <div class="phase-item" data-phase="summary">
+                    <div class="phase-name">总结确认</div>
+                    <div class="phase-time">5分钟</div>
+                </div>
+            </div>
+
+            <!-- 会话信息 -->
+            <div class="session-info">
+                <div class="question-preview" id="questionPreview">
+                    加载中...
+                </div>
+                <div>
+                    <span id="sessionStatus">准备开始</span>
+                </div>
+            </div>
+
+            <!-- 对话历史 -->
+            <div class="conversation-history" id="conversationHistory">
+                <div class="message message-ai">
+                    <div class="message-role">🤖 AI 访谈员</div>
+                    <div class="message-content">
+                        欢迎！我们即将开始深度访谈。这个过程将帮助我更好地了解您的故事。
+                        请放松，按照自己的节奏回答，没有对错之分。准备好了吗？
+                    </div>
+                </div>
+            </div>
+
+            <!-- 当前追问 -->
+            <div class="current-question" id="currentQuestion">
+                <div class="current-question-text" id="currentQuestionText">
+                    让我们开始吧。首先，我想了解一下您现在的状态。您今天感觉如何？
+                    <span class="dice-indicator" id="diceIndicator" style="display: none;">DICE</span>
+                </div>
+            </div>
+
+            <!-- 回答输入 -->
+            <div class="answer-input-area">
+                <textarea
+                    class="answer-textarea"
+                    id="answerInput"
+                    placeholder="请输入您的回答..."
+                ></textarea>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+                <button class="pip-boy-button primary" id="submitAnswerBtn" onclick="submitAnswer()">
+                    提交回答
+                </button>
+                <button class="pip-boy-button" id="endPhaseBtn" onclick="endCurrentPhase()">
+                    结束当前阶段
+                </button>
+                <button class="pip-boy-button danger" id="endSessionBtn" onclick="endSession()">
+                    生成总结
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div>AI正在思考...</div>
+        </div>
+    </div>
+
+    <!-- 状态提示 -->
+    <div class="status-toast" id="statusToast"></div>
+
+    <!-- JavaScript -->
+    <script src="js/interview.js"></script>
+</body>
+</html>

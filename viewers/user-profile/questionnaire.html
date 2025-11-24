@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人历史画像问卷 - Pip-Boy</title>
+
+    <!-- Pip-Boy 主题样式 -->
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-colors.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-base.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-crt.css">
+    <link rel="stylesheet" href="../pip-boy-theme/css/pip-boy-components.css">
+
+    <style>
+        /* 问卷特定样式 */
+        .questionnaire-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .question-panel {
+            background: var(--pip-boy-black);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 400px;
+            box-shadow: 0 0 20px var(--pip-boy-glow-strong);
+        }
+
+        .question-number {
+            font-size: 1.2em;
+            color: var(--pip-boy-green);
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px var(--pip-boy-glow-mid);
+        }
+
+        .question-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: var(--pip-boy-green-bright);
+        }
+
+        .answer-textarea {
+            width: 100%;
+            min-height: 250px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--pip-boy-green);
+            color: var(--pip-boy-green-bright);
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            padding: 15px;
+            resize: vertical;
+        }
+
+        .answer-textarea:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--pip-boy-glow-mid);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            gap: 15px;
+        }
+
+        .pip-boy-button {
+            background: var(--pip-boy-black);
+            color: var(--pip-boy-green);
+            border: 2px solid var(--pip-boy-green);
+            padding: 12px 24px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        .pip-boy-button:hover {
+            background: var(--pip-boy-green);
+            color: var(--pip-boy-black);
+            box-shadow: 0 0 15px var(--pip-boy-glow-strong);
+        }
+
+        .pip-boy-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin: 30px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: var(--pip-boy-black);
+            border: 2px solid var(--pip-boy-green);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--pip-boy-green);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--pip-boy-glow-mid);
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--pip-boy-black);
+            font-weight: bold;
+            text-shadow: 0 0 5px var(--pip-boy-glow-strong);
+        }
+
+        .status-message {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .status-success {
+            background: rgba(74, 246, 38, 0.1);
+            border: 1px solid var(--pip-boy-green);
+            color: var(--pip-boy-green-bright);
+        }
+
+        .status-error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff6666;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .loading-spinner span {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="pip-boy-body">
+    <div class="pip-boy-container">
+        <!-- 头部 -->
+        <div class="pip-boy-header">
+            <div class="pip-boy-title">ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM</div>
+            <div class="pip-boy-subtitle">个人历史画像深度采集系统 - 基础问卷</div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="questionnaire-container">
+            <!-- 问题面板 -->
+            <div class="question-panel" id="questionPanel">
+                <div class="question-number" id="questionNumber">问题 1/8</div>
+                <div class="question-text" id="questionText">加载中...</div>
+                <textarea
+                    class="answer-textarea"
+                    id="answerInput"
+                    placeholder="请输入您的回答..."
+                ></textarea>
+            </div>
+
+            <!-- 按钮组 -->
+            <div class="button-group">
+                <button class="pip-boy-button" id="prevBtn" onclick="prevQuestion()">
+                    ◀ 上一题
+                </button>
+                <button class="pip-boy-button" id="saveDraftBtn" onclick="saveDraft()">
+                    💾 保存草稿
+                </button>
+                <button class="pip-boy-button" id="nextBtn" onclick="nextQuestion()">
+                    下一题 ▶
+                </button>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <div class="progress-text" id="progressText">1/8</div>
+                </div>
+            </div>
+
+            <!-- 提交按钮（最后一题显示） -->
+            <button
+                class="pip-boy-button"
+                id="submitBtn"
+                style="display: none; width: 100%; margin-top: 20px;"
+                onclick="submitQuestionnaire()"
+            >
+                提交问卷并进入深度访谈
+            </button>
+
+            <!-- 状态消息 -->
+            <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+            <!-- 加载动画 -->
+            <div id="loadingSpinner" class="loading-spinner">
+                <span>处理中...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/questionnaire.js"></script>
+</body>
+</html>
