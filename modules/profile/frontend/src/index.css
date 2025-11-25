@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* Pip-Boy Theme Variables */
+@theme {
+  --color-pip-green: #4af626;
+  --color-pip-green-bright: #6fff4a;
+  --color-pip-green-dim: #2d8a17;
+  --color-pip-amber: #f5a623;
+  --color-pip-bg: #0a0a0a;
+  --color-pip-dark: #050505;
+}
+
+/* CSS Variables for compatibility */
+:root {
+  --pip-green: var(--color-pip-green);
+  --pip-green-bright: var(--color-pip-green-bright);
+  --pip-green-dim: var(--color-pip-green-dim);
+  --pip-amber: var(--color-pip-amber);
+  --pip-bg: var(--color-pip-bg);
+  --pip-shadow: rgba(74, 246, 38, 0.5);
+}
+
+body {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--pip-bg);
+  color: var(--pip-green);
+  overflow: hidden;
+}
+
+/* CRT Effect Container */
+.crt-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(ellipse at center, #0d1a0a 0%, #0a0a0a 100%);
+  overflow: hidden;
+}
+
+/* Scanline Effect */
+.crt-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(74, 246, 38, 0.2),
+    transparent
+  );
+  animation: scanline 8s linear infinite;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* CRT Lines */
+.crt-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Flicker Effect */
+.pip-boy-screen {
+  animation: flicker 0.15s infinite;
+  text-shadow: 0 0 5px var(--pip-shadow);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.96; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pip-bg);
+  border: 1px solid var(--pip-green-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pip-green);
+  border: 1px solid var(--pip-green-bright);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pip-green-bright);
+}
+
+/* Custom shadow utilities */
+.shadow-pip-glow {
+  box-shadow: 0 0 15px var(--pip-shadow);
+}
+
+.shadow-pip-glow-strong {
+  box-shadow: 0 0 30px var(--pip-shadow);
+}
