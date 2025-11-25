@@ -1,0 +1,37 @@
+{
+  "name": "@modules/log-viewer-frontend",
+  "version": "2.0.0",
+  "description": "Pip-Boy Log Viewer Frontend - React + TypeScript",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "log-viewer",
+    "react",
+    "typescript",
+    "pip-boy"
+  ],
+  "author": "壮爸",
+  "license": "MIT",
+  "dependencies": {
+    "@packages/pip-boy-theme": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.17",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.3.3",
+    "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

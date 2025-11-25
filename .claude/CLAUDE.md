@@ -19,11 +19,17 @@
 
 **正面示例（✅ 正确）：**
 ```
-module-name/
-├── scripts/module-name/     # 独立脚本目录
-├── services/module-name/    # 独立服务目录
-├── viewers/module-name/     # 独立前端目录
-└── data/module-name/        # 独立数据目录
+modules/module-name/
+├── backend/                  # TypeScript 后端
+│   ├── src/
+│   └── package.json
+├── frontend/                 # React 前端（如需要）
+│   ├── src/
+│   └── package.json
+├── data/                     # 独立数据目录
+│   └── database.db
+├── config.json               # 模块配置
+└── README.md
 ```
 
 ## Claude 特殊指令（核心要求）
@@ -132,8 +138,8 @@ if (-not $ApiKey) {
 
 ### 标准端口分配
 - **主入口门户**: 3000
+- **日志查看器**: 3001
 - **个人画像系统**: 3002
-- **日志查看器**: 55555
 
 ### 开发注意事项
 
@@ -213,61 +219,89 @@ if (-not $ApiKey) {
 
 ### 当前阶段
 
-**阶段 1：RAG 基础设施搭建**（🔄 进行中）
+**架构重构已完成**（✅ 2025-01-25）
 
 **技术栈**：
-- 前端：TypeScript（log-viewer 现有技术栈）
-- 后端：Node.js + Express + better-sqlite3（原生 SQL）
-- 数据库：`data/rag-database.db`
+- 前端：React 19 + TypeScript + Tailwind CSS v4
+- 后端：Node.js + Express 5 + better-sqlite3
+- 构建工具：Vite 7
+- 包管理：pnpm workspace (monorepo)
+- 主题：Pip-Boy 风格（CRT效果、磷光绿 #4af626）
 
 **目录结构**：
 ```
 voice-notification-project/
-├── viewers/log-viewer/          # 现有日志查看器
-├── services/                    # RAG 核心服务
-│   ├── embedding-service.js
-│   └── hybrid-retrieval.js
-├── scripts/init-database.js
-├── tests/test-retrieval.js
-└── data/
-    ├── memory.db               # 语音通知系统
-    └── rag-database.db         # RAG 系统
+├── modules/                     # 功能模块（核心）
+│   ├── log-viewer/             # 日志查看器
+│   │   ├── backend/            # Express 后端
+│   │   ├── data/               # 日志数据
+│   │   └── config.json
+│   ├── profile/                # 个人画像系统
+│   │   ├── backend/            # Express 后端
+│   │   ├── data/               # SQLite 数据库
+│   │   └── config.json
+│   └── rag/                    # RAG 知识库
+│       ├── backend/            # 混合检索引擎
+│       ├── data/               # 向量数据库
+│       └── config.json
+│
+├── packages/                    # 共享包
+│   └── pip-boy-theme/          # Pip-Boy UI 主题
+│       ├── tailwind-preset.js  # Tailwind 预设
+│       ├── crt-plugin.js       # CRT 效果插件
+│       └── components/         # React 组件
+│
+├── portals/                     # 入口门户
+│   └── main/                   # 主入口（端口3000）
+│
+├── viewers/                     # 独立前端（待迁移）
+│   └── log-viewer/             # 原日志查看器前端
+│
+├── scripts/                     # PowerShell 脚本
+│   └── voice-notification/     # 语音通知系统
+│
+└── data/                        # 全局数据
+    └── memory.db               # 语音通知数据库
 ```
 
-**详细实施步骤**：`docs/RAG系统实施方案与进度追踪.md`
+**模块说明**：
+- `modules/log-viewer` - 日志实时监控，长轮询推送
+- `modules/profile` - DICE+GROW 个人画像问卷系统
+- `modules/rag` - 向量检索 + BM25 + RRF 融合
 
 ---
 
 ### 长期规划
 
-完整的 5 阶段演进路线图请参考：**`.claude/架构演进指南.md`**
+**已完成阶段**：
+- ✅ pip-boy-theme Tailwind 化
+- ✅ log-viewer 模块迁移至 modules/
+- ✅ profile 模块迁移至 modules/
+- ✅ RAG 模块迁移至 modules/
+- ✅ 门户集成 @packages/pip-boy-theme
 
-**阶段概览**：
-- **阶段 0**：环境清理（✅ 已完成）
-- **阶段 1**：RAG 基础设施（🔄 当前）
-- **阶段 2**：主入口门户（Vite + React）
-- **阶段 3**：共享组件库（packages/ui）
-- **阶段 4**：完整后端（Fastify + Drizzle）
-- **阶段 5**：统一技术栈（全面 React 化）
+**后续优化方向**：
+- 前端统一迁移至 React + TypeScript
+- 引入 Drizzle ORM 替代原生 SQL
+- 添加单元测试和 E2E 测试
 
 ---
 
 ### Claude 开发指令（架构相关）
 
-1. **严格遵循当前阶段的技术栈**
-   - 阶段 1（RAG）：Vanilla JS + better-sqlite3
-   - 阶段 2+（新功能）：React + TypeScript
-   - 不要提前引入后续阶段的技术
+1. **新模块统一使用 TypeScript**
+   - 后端：Express 5 + TypeScript
+   - 前端：React 19 + TypeScript + Tailwind CSS
+   - 使用 pnpm workspace 管理依赖
 
-2. **在关键时机主动提示**
-   - 发现代码重复 → 提示创建共享组件（阶段 3）
-   - 数据管理变复杂 → 提示引入 Drizzle（阶段 4）
-   - 需要架构升级 → 阅读 `.claude/架构演进指南.md` 获取详细方案
+2. **模块创建规范**
+   - 在 `modules/` 目录下创建新模块
+   - 包含 backend/、frontend/（如需）、data/、config.json
+   - 每个模块有独立的 package.json
 
-3. **创建新模块时说明原因**
-   - 解释为什么需要这个模块
-   - 说明它体现了什么架构优势
-   - 提供教学向的内容
+3. **使用共享主题**
+   - 引用 `@packages/pip-boy-theme` 获取 Pip-Boy 风格
+   - 保持 CRT 效果和磷光绿（#4af626）视觉一致性
 
 4. **保持迁移灵活性**
    - 避免深度框架绑定
@@ -276,4 +310,4 @@ voice-notification-project/
 
 ---
 
-**维护者**: 壮爸 | **版本**: 2.0 | **更新**: 2025-01-20
+**维护者**: 壮爸 | **版本**: 3.0 | **更新**: 2025-01-25

@@ -20,16 +20,16 @@ export default defineConfig({
     proxy: {
       // 日志查看器的 API 请求（当从主门户访问时）
       '/api/logs': {
-        target: 'http://localhost:55555',
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
       '/sse': {
-        target: 'http://localhost:55555',
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
       // 日志查看器的页面和资源
       '/api/log': {
-        target: 'http://localhost:55555',
+        target: 'http://localhost:3001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/log/, ''),
       },

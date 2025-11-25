@@ -32,7 +32,7 @@ export class ServiceManager {
         id: 'log-viewer',
         name: '日志查看系统',
         description: 'System Log Viewer',
-        port: 55555,
+        port: 3001,
         healthEndpoint: '/api/log/health',
         status: 'offline'
       },

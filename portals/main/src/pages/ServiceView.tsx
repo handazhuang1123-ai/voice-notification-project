@@ -189,7 +189,7 @@ export function ServiceView({ onBack }: ServiceViewProps) {
                 <h4 className="text-sm font-bold text-pip-green mb-2">服务信息</h4>
                 <div className="text-xs text-pip-green-dim space-y-1">
                   <p>服务 ID: {selectedService}</p>
-                  <p>端口: {selectedService === 'log-viewer' ? '55555' : '3002'}</p>
+                  <p>端口: {selectedService === 'log-viewer' ? '3001' : '3002'}</p>
                   <p>代理路径: {getServiceUrl(selectedService)}</p>
                   {services.find(s => s.id === selectedService)?.lastCheck && (
                     <p>最后检查: {new Date(services.find(s => s.id === selectedService)!.lastCheck!).toLocaleString()}</p>

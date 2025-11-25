@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
-/* Pip-Boy Theme Variables */
+/* Pip-Boy Theme Variables - 使用原始 pip-boy-theme 颜色 (#4af626) */
 @theme {
-  --color-pip-green: #41ff00;
-  --color-pip-green-bright: #5aff19;
-  --color-pip-green-dim: #29cc00;
-  --color-pip-amber: #ffb000;
-  --color-pip-bg: #000500;
-  --color-pip-dark: #001100;
+  --color-pip-green: #4af626;
+  --color-pip-green-bright: #6fff4a;
+  --color-pip-green-dim: #2d8a17;
+  --color-pip-amber: #f5a623;
+  --color-pip-bg: #0a0a0a;
+  --color-pip-dark: #050505;
 }
 
 /* CSS Variables for compatibility */
@@ -17,7 +17,7 @@
   --pip-green-dim: var(--color-pip-green-dim);
   --pip-amber: var(--color-pip-amber);
   --pip-bg: var(--color-pip-bg);
-  --pip-shadow: rgba(65, 255, 0, 0.5);
+  --pip-shadow: rgba(74, 246, 38, 0.5);
 }
 
 body {
@@ -35,7 +35,7 @@ body {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(ellipse at center, #001100 0%, #000500 100%);
+  background: radial-gradient(ellipse at center, #0d1a0a 0%, #0a0a0a 100%);
   overflow: hidden;
 }
 
@@ -50,7 +50,7 @@ body {
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(65, 255, 0, 0.2),
+    rgba(74, 246, 38, 0.2),
     transparent
   );
   animation: scanline 8s linear infinite;
@@ -125,7 +125,7 @@ body {
 }
 
 .menu-item:hover {
-  background-color: rgba(65, 255, 0, 0.1);
+  background-color: rgba(74, 246, 38, 0.1);
   border-left-color: var(--pip-green);
 }
 
@@ -141,7 +141,7 @@ body {
 /* Progress Bar */
 .progress-bar {
   height: 1.25rem;
-  background-color: rgba(65, 255, 0, 0.1);
+  background-color: rgba(74, 246, 38, 0.1);
   border: 1px solid var(--pip-green);
   position: relative;
 }
@@ -163,7 +163,7 @@ body {
 }
 
 .service-button:hover {
-  background: rgba(65, 255, 0, 0.1);
+  background: rgba(74, 246, 38, 0.1);
   transform: scale(1.05);
   box-shadow: 0 0 20px var(--pip-shadow);
 }

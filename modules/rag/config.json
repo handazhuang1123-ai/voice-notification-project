@@ -1,0 +1,30 @@
+{
+  "name": "RAG Knowledge Base Module",
+  "version": "2.0.0",
+  "description": "混合检索引擎（向量 + BM25 + RRF融合）",
+  "author": "壮爸",
+  "paths": {
+    "database": "./data/rag-database.db"
+  },
+  "ollama": {
+    "url": "http://localhost:11434"
+  },
+  "embedding": {
+    "model": "qwen3-embedding:0.6b",
+    "dimensions": 768,
+    "version": "v1.0"
+  },
+  "retrieval": {
+    "defaultTopK": 10,
+    "defaultAlpha": 0.7,
+    "rrfK": 60
+  },
+  "layers": {
+    "L1": { "name": "核心价值", "weight": 5.0 },
+    "L2": { "name": "工作风格", "weight": 4.0 },
+    "L3": { "name": "技术偏好", "weight": 3.5 },
+    "L4": { "name": "历史决策", "weight": 3.0 },
+    "L5": { "name": "项目上下文", "weight": 2.5 },
+    "L6": { "name": "临时会话", "weight": 1.0 }
+  }
+}

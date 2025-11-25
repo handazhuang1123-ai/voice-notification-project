@@ -1,0 +1,37 @@
+{
+  "name": "@modules/rag-backend",
+  "version": "2.0.0",
+  "description": "RAG Knowledge Base Module - 混合检索引擎后端",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "init-db": "tsx src/init-database.ts",
+    "view-db": "tsx src/view-database.ts"
+  },
+  "keywords": [
+    "rag",
+    "embedding",
+    "retrieval",
+    "bm25",
+    "typescript"
+  ],
+  "author": "壮爸",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "better-sqlite3": "^9.2.2",
+    "wink-bm25-text-search": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
