@@ -1,40 +1,66 @@
 /**
- * Approval Page
- * 洞察审批页面 - Phase 3
- * 用户审核和认可 AI 分析结果
+ * Approval Page (迭代模式)
+ * 洞察审批页面 - 单会话审批模式
+ * 从 URL 获取 session_id，完成后跳转到下一题或显示完成
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PipBoyPanel, PipBoyButton, PipBoyBadge } from '@packages/pip-boy-theme';
-import { API_BASE_URL, STORAGE_KEYS } from '../constants';
+import {
+  API_BASE_URL,
+  QUESTIONS,
+  getNextUncompletedQuestionIndex,
+  getCompletedQuestionsCount,
+  markQuestionCompleted
+} from '../constants';
 import type { AnalysisSummary, Insight, InsightLayer } from '../types';
 
 type InsightStatus = 'pending' | 'approved' | 'modified' | 'rejected';
 
 export function Approval() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [summary, setSummary] = useState<AnalysisSummary | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
+  const [questionId, setQuestionId] = useState<string>('');
   const [modifiedInsights, setModifiedInsights] = useState<Record<string, string>>({});
   const [insightStatuses, setInsightStatuses] = useState<Record<string, InsightStatus>>({});
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  // 从 URL 获取 session_id 并加载分析数据
   useEffect(() => {
-    loadSummaryData();
-  }, []);
+    const sessionIdFromUrl = searchParams.get('session_id');
 
-  const loadSummaryData = () => {
-    const summaryData = localStorage.getItem(STORAGE_KEYS.CURRENT_SUMMARY);
-    const currentSessionId = localStorage.getItem(STORAGE_KEYS.CURRENT_SESSION_ID);
+    if (!sessionIdFromUrl) {
+      setStatusMessage('缺少会话ID，即将返回问卷页面...');
+      setTimeout(() => {
+        navigate('/questionnaire');
+      }, 2000);
+      return;
+    }
 
-    if (summaryData && currentSessionId) {
-      try {
-        const parsedSummary = JSON.parse(summaryData);
+    setSessionId(sessionIdFromUrl);
+    loadSummaryData(sessionIdFromUrl);
+  }, [searchParams]);
+
+  const loadSummaryData = async (sessionId: string) => {
+    setLoading(true);
+    try {
+      // 调用后端 API 获取会话的分析总结
+      const response = await fetch(`${API_BASE_URL}/generate-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.summary) {
+        const parsedSummary = result.summary;
         setSummary(parsedSummary);
-        setSessionId(currentSessionId);
 
         // 初始化所有洞察状态为 pending
         const initialStatuses: Record<string, InsightStatus> = {};
@@ -44,14 +70,20 @@ export function Approval() {
         setInsightStatuses(initialStatuses);
 
         console.log('✅ 分析数据加载成功');
-      } catch (error) {
-        console.error('❌ 解析分析数据失败:', error);
-        alert('分析数据格式错误，请重新生成');
-        navigate('/interview');
+      } else {
+        setStatusMessage('分析数据加载失败');
+        setTimeout(() => {
+          navigate('/questionnaire');
+        }, 2000);
       }
-    } else {
-      alert('没有找到分析数据，请先完成访谈');
-      navigate('/interview');
+    } catch (error) {
+      console.error('❌ 解析分析数据失败:', error);
+      setStatusMessage('分析数据加载失败');
+      setTimeout(() => {
+        navigate('/questionnaire');
+      }, 2000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -77,10 +109,11 @@ export function Approval() {
     try {
       const approvalData = {
         session_id: sessionId,
-        insights: summary.insights.map(insight => ({
+        action: 'approve',
+        modified_insights: summary.insights.map(insight => ({
           insight_id: insight.id,
           status: insightStatuses[insight.id] || 'pending',
-          modified_content: modifiedInsights[insight.id] || insight.content
+          content: modifiedInsights[insight.id] || insight.content
         }))
       };
 
@@ -93,16 +126,30 @@ export function Approval() {
       const result = await response.json();
 
       if (result.success) {
-        setStatusMessage('审批提交成功！个人画像已生成。');
+        setStatusMessage('审批提交成功！数据已入库。');
 
-        // 清除本地存储
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_SUMMARY);
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_SESSION_ID);
+        // 标记当前问题为已完成
+        if (questionId) {
+          markQuestionCompleted(questionId);
+          console.log(`✅ 问题 ${questionId} 已完成`);
+        }
 
-        setTimeout(() => {
-          // 可以跳转到查看完整画像的页面，或返回首页
-          navigate('/questionnaire');
-        }, 3000);
+        // 检查是否还有未完成的问题
+        const nextIndex = getNextUncompletedQuestionIndex();
+
+        if (nextIndex === -1) {
+          // 所有问题已完成
+          setStatusMessage('恭喜！所有问题已完成。即将返回首页...');
+          setTimeout(() => {
+            navigate('/questionnaire');
+          }, 2000);
+        } else {
+          // 还有未完成的问题，跳转到问卷页面（会自动显示下一题）
+          setStatusMessage(`问题已完成！即将进入第 ${nextIndex + 1} 题...`);
+          setTimeout(() => {
+            navigate('/questionnaire');
+          }, 2000);
+        }
       } else {
         setStatusMessage(`提交失败: ${result.message}`);
       }
@@ -148,6 +195,13 @@ export function Approval() {
     return <PipBoyBadge variant={variants[status]}>{labels[status]}</PipBoyBadge>;
   };
 
+  // 获取当前问题的编号
+  const getCurrentQuestionNumber = (): number => {
+    if (!questionId) return 0;
+    const questionIndex = QUESTIONS.findIndex(q => q.id === questionId);
+    return questionIndex >= 0 ? questionIndex + 1 : 0;
+  };
+
   if (!summary) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -172,6 +226,10 @@ export function Approval() {
     rejected: Object.values(insightStatuses).filter(s => s === 'rejected').length
   };
 
+  const completedCount = getCompletedQuestionsCount();
+  const totalCount = QUESTIONS.length;
+  const currentQuestionNumber = getCurrentQuestionNumber();
+
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -193,6 +251,17 @@ export function Approval() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto min-h-0 p-6">
         <div className="max-w-6xl mx-auto">
+          {/* Progress Info */}
+          <div className="mb-4 p-3 bg-black border border-pip-green flex justify-between items-center">
+            <div className="text-pip-green">
+              <span className="font-bold">进度：</span>
+              第 {currentQuestionNumber} / {totalCount} 题审批
+            </div>
+            <div className="text-pip-green-dim text-sm">
+              已完成：{completedCount} 题
+            </div>
+          </div>
+
           {/* Summary Overview */}
           <PipBoyPanel className="mb-6 p-6">
             <h2 className="text-xl font-bold text-pip-green-bright mb-4">分析总结概览</h2>
@@ -332,7 +401,7 @@ export function Approval() {
               loading={loading}
               className="px-12 py-3 text-lg"
             >
-              提交审批并生成最终画像
+              提交审批并继续下一题
             </PipBoyButton>
           </div>
 

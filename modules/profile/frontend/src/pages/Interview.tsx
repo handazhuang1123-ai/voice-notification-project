@@ -1,17 +1,18 @@
 /**
- * Interview Page
- * 深度访谈页面 - Phase 2
- * 五阶段访谈：开场破冰 → 叙事探索 → GROW结构化 → 价值澄清 → 总结确认
+ * Interview Page (迭代模式)
+ * 深度访谈页面 - 单会话访谈模式
+ * 从 URL 获取 session_id，完成后跳转到 Approval
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PipBoyPanel, PipBoyButton, PipBoyBadge, PipBoySpinner } from '@packages/pip-boy-theme';
-import { PHASES, API_BASE_URL, STORAGE_KEYS } from '../constants';
+import { PHASES, API_BASE_URL, QUESTIONS, getCompletedQuestionsCount } from '../constants';
 import type { InterviewSession, Message, InterviewPhase } from '../types';
 
 export function Interview() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [currentSession, setCurrentSession] = useState<InterviewSession | null>(null);
@@ -21,23 +22,35 @@ export function Interview() {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  // 加载下一个待访谈的会话
+  // 从 URL 获取 session_id 并加载会话
   useEffect(() => {
-    loadNextSession();
-  }, []);
+    const sessionId = searchParams.get('session_id');
+
+    if (!sessionId) {
+      setStatusMessage('缺少会话ID，即将返回问卷页面...');
+      setTimeout(() => {
+        navigate('/questionnaire');
+      }, 2000);
+      return;
+    }
+
+    loadSession(sessionId);
+  }, [searchParams]);
 
   // 自动滚动到最新消息
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
 
-  const loadNextSession = async () => {
+  const loadSession = async (sessionId: string) => {
     setLoading(true);
     try {
+      // 直接获取会话数据（后端需要新增此 API 或修改 next-session）
+      // 暂时使用 next-session 逻辑，但实际应该改为根据 sessionId 获取
       const response = await fetch(`${API_BASE_URL}/next-session?user_id=default_user`);
       const data = await response.json();
 
-      if (data.has_next) {
+      if (data.has_next && data.session.session_id === sessionId) {
         setCurrentSession(data.session);
         setConversationHistory(data.session.conversation_history || []);
 
@@ -50,11 +63,11 @@ export function Interview() {
           startOpeningPhase();
         }
 
-        console.log('✅ 会话加载成功:', data.session.session_id);
+        console.log('✅ 会话加载成功:', sessionId);
       } else {
-        setStatusMessage('所有问题已完成！即将跳转到审批页面...');
+        setStatusMessage('会话不存在或已完成');
         setTimeout(() => {
-          navigate('/approval');
+          navigate('/questionnaire');
         }, 2000);
       }
     } catch (error) {
@@ -181,14 +194,10 @@ export function Interview() {
       const result = await response.json();
 
       if (result.success) {
-        // 保存总结数据到本地存储
-        localStorage.setItem(STORAGE_KEYS.CURRENT_SUMMARY, JSON.stringify(result.summary));
-        localStorage.setItem(STORAGE_KEYS.CURRENT_SESSION_ID, currentSession.session_id);
-
         setStatusMessage('分析总结生成成功！即将跳转到审批页面...');
 
         setTimeout(() => {
-          navigate('/approval');
+          navigate(`/approval?session_id=${currentSession.session_id}`);
         }, 2000);
       } else {
         setStatusMessage(`生成总结失败: ${result.message}`);
@@ -213,6 +222,13 @@ export function Interview() {
     }
   };
 
+  // 获取当前问题的编号
+  const getCurrentQuestionNumber = (): number => {
+    if (!currentSession) return 0;
+    const questionIndex = QUESTIONS.findIndex(q => q.id === currentSession.question_id);
+    return questionIndex >= 0 ? questionIndex + 1 : 0;
+  };
+
   if (loading && !currentSession) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -220,6 +236,10 @@ export function Interview() {
       </div>
     );
   }
+
+  const completedCount = getCompletedQuestionsCount();
+  const totalCount = QUESTIONS.length;
+  const currentQuestionNumber = getCurrentQuestionNumber();
 
   return (
     <div className="h-screen flex flex-col">
@@ -242,6 +262,17 @@ export function Interview() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto min-h-0 p-6">
         <div className="max-w-5xl mx-auto">
+          {/* Progress Info */}
+          <div className="mb-4 p-3 bg-black border border-pip-green flex justify-between items-center">
+            <div className="text-pip-green">
+              <span className="font-bold">进度：</span>
+              第 {currentQuestionNumber} / {totalCount} 题访谈
+            </div>
+            <div className="text-pip-green-dim text-sm">
+              已完成：{completedCount} 题
+            </div>
+          </div>
+
           {/* Phase Indicator */}
           <div className="mb-6 p-4 bg-black border-2 border-pip-green flex justify-between">
             {Object.entries(PHASES).map(([key, phase], idx) => (

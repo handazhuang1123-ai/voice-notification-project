@@ -58,7 +58,9 @@ export const STORAGE_KEYS = {
   QUESTIONNAIRE_TIMESTAMP: 'profile_questionnaire_timestamp',
   INTERVIEW_SESSIONS: 'interview_sessions',
   CURRENT_SUMMARY: 'current_summary',
-  CURRENT_SESSION_ID: 'current_session_id'
+  CURRENT_SESSION_ID: 'current_session_id',
+  COMPLETED_QUESTIONS: 'profile_completed_questions', // 已完成的问题ID数组
+  CURRENT_QUESTION_INDEX: 'profile_current_question_index' // 当前问题索引
 };
 
 // 最小答案长度
@@ -66,3 +68,63 @@ export const MIN_ANSWER_LENGTH = 50;
 
 // 自动保存间隔（毫秒）
 export const AUTO_SAVE_INTERVAL = 30000;
+// 辅助函数：获取已完成的问题数量
+export function getCompletedQuestionsCount(): number {
+  const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);
+  if (!completed) return 0;
+  try {
+    return JSON.parse(completed).length;
+  } catch {
+    return 0;
+  }
+}
+
+// 辅助函数：检查问题是否已完成
+export function isQuestionCompleted(questionId: string): boolean {
+  const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);
+  if (!completed) return false;
+  try {
+    const completedIds: string[] = JSON.parse(completed);
+    return completedIds.includes(questionId);
+  } catch {
+    return false;
+  }
+}
+
+// 辅助函数：标记问题为已完成
+export function markQuestionCompleted(questionId: string): void {
+  const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);
+  let completedIds: string[] = [];
+  if (completed) {
+    try {
+      completedIds = JSON.parse(completed);
+    } catch {
+      completedIds = [];
+    }
+  }
+  if (!completedIds.includes(questionId)) {
+    completedIds.push(questionId);
+    localStorage.setItem(STORAGE_KEYS.COMPLETED_QUESTIONS, JSON.stringify(completedIds));
+  }
+}
+
+// 辅助函数：获取下一个未完成的问题索引
+export function getNextUncompletedQuestionIndex(): number {
+  const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);
+  let completedIds: string[] = [];
+  if (completed) {
+    try {
+      completedIds = JSON.parse(completed);
+    } catch {
+      completedIds = [];
+    }
+  }
+  
+  for (let i = 0; i < QUESTIONS.length; i++) {
+    if (!completedIds.includes(QUESTIONS[i].id)) {
+      return i;
+    }
+  }
+  
+  return -1; // 所有问题已完成
+}
