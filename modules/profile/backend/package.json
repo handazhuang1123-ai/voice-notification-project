@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "clear-data": "tsx src/clear-data.ts"
   },
   "keywords": [
     "profile",
@@ -21,7 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.4.6",
     "cors": "^2.8.5",
     "express": "^5.1.0"
   },

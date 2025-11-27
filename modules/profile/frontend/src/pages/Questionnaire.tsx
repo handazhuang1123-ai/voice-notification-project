@@ -13,7 +13,8 @@ import {
   STORAGE_KEYS,
   MIN_ANSWER_LENGTH,
   getNextUncompletedQuestionIndex,
-  getCompletedQuestionsCount
+  getCompletedQuestionsCount,
+  unmarkQuestionCompleted
 } from '../constants';
 
 export function Questionnaire() {
@@ -133,6 +134,9 @@ export function Questionnaire() {
             // ignore
           }
         }
+
+        // ✅ 清除"已完成"标记，允许重新走完整流程（覆盖逻辑）
+        unmarkQuestionCompleted(currentQuestion.id);
 
         // 跳转到访谈页面
         setTimeout(() => {

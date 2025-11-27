@@ -91,24 +91,62 @@ app.post('/api/rag/profile/submit', (req: Request, res: Response) => {
         db.prepare('BEGIN').run();
 
         const sessions = answers.map((answer: { question_id: string; initial_answer: string }) => {
-            const sessionId = generateId('session');
-
             const question = PROFILE_QUESTIONS.find(q => q.id === answer.question_id);
             if (!question) {
                 throw new Error(`无效的问题ID: ${answer.question_id}`);
             }
 
-            db.prepare(`
-                INSERT INTO interview_sessions
-                (session_id, user_id, question_id, question_text, initial_answer, phase_status)
-                VALUES (?, ?, ?, ?, ?, 'pending')
-            `).run(
-                sessionId,
-                user_id,
-                answer.question_id,
-                question.text,
-                answer.initial_answer
-            );
+            // ✅ 检查是否已存在该用户+问题的会话
+            const existingSession = db.prepare(`
+                SELECT session_id FROM interview_sessions
+                WHERE user_id = ? AND question_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            `).get(user_id, answer.question_id) as { session_id: string } | undefined;
+
+            let sessionId: string;
+
+            if (existingSession) {
+                // 已存在会话：覆盖逻辑
+                sessionId = existingSession.session_id;
+                console.log(`🔄 检测到已存在会话 ${sessionId}，执行覆盖...`);
+
+                // 🗑️ 级联删除所有关联的旧洞察数据
+                db.prepare(`DELETE FROM insights WHERE session_id = ?`).run(sessionId);
+                db.prepare(`DELETE FROM user_values WHERE session_id = ?`).run(sessionId);
+                db.prepare(`DELETE FROM turning_points WHERE session_id = ?`).run(sessionId);
+                db.prepare(`DELETE FROM goals WHERE session_id = ?`).run(sessionId);
+                db.prepare(`DELETE FROM personality_traits WHERE session_id = ?`).run(sessionId);
+                console.log(`🗑️ 已删除旧洞察数据`);
+
+                // 🔄 重置会话状态
+                db.prepare(`
+                    UPDATE interview_sessions
+                    SET initial_answer = ?,
+                        question_text = ?,
+                        phase_status = 'pending',
+                        phases_completed = NULL,
+                        full_transcript = NULL,
+                        ai_analysis = NULL,
+                        user_approved = 0,
+                        final_summary = NULL,
+                        approved_at = NULL,
+                        updated_at = datetime('now', 'localtime')
+                    WHERE session_id = ?
+                `).run(answer.initial_answer, question.text, sessionId);
+                console.log(`✅ 会话已重置为初始状态`);
+            } else {
+                // 不存在会话：新建
+                sessionId = generateId('session');
+
+                db.prepare(`
+                    INSERT INTO interview_sessions
+                    (session_id, user_id, question_id, question_text, initial_answer, phase_status)
+                    VALUES (?, ?, ?, ?, ?, 'pending')
+                `).run(sessionId, user_id, answer.question_id, question.text, answer.initial_answer);
+
+                console.log(`✅ 创建新会话: ${sessionId}`);
+            }
 
             return {
                 session_id: sessionId,
@@ -143,21 +181,34 @@ app.post('/api/rag/profile/submit', (req: Request, res: Response) => {
 });
 
 // =============================================================================
-// API 2: 获取下一个待访谈的会话
+// API 2: 获取下一个待访谈的会话（支持指定 session_id）
 // =============================================================================
 app.get('/api/rag/profile/next-session', (req: Request, res: Response) => {
     console.log('🔍 API 2: 获取下一个待访谈的会话');
-    const { user_id = 'default_user' } = req.query;
+    const { user_id = 'default_user', session_id } = req.query;
 
     const db = getDatabase();
 
     try {
-        const session = db.prepare(`
-            SELECT * FROM interview_sessions
-            WHERE user_id = ? AND phase_status != 'completed'
-            ORDER BY created_at ASC
-            LIMIT 1
-        `).get(user_id) as Record<string, unknown> | undefined;
+        let session: Record<string, unknown> | undefined;
+
+        if (session_id) {
+            // ✅ 如果指定了 session_id，直接查询该 session
+            console.log(`🎯 查询指定会话: ${session_id}`);
+            session = db.prepare(`
+                SELECT * FROM interview_sessions
+                WHERE session_id = ?
+            `).get(session_id) as Record<string, unknown> | undefined;
+        } else {
+            // 未指定 session_id，返回下一个未完成的会话
+            console.log(`🔍 查询下一个未完成会话`);
+            session = db.prepare(`
+                SELECT * FROM interview_sessions
+                WHERE user_id = ? AND phase_status != 'completed'
+                ORDER BY created_at ASC
+                LIMIT 1
+            `).get(user_id) as Record<string, unknown> | undefined;
+        }
 
         if (!session) {
             res.json({
@@ -200,6 +251,9 @@ app.post('/api/rag/profile/generate-followup', async (req: Request, res: Respons
     console.log('🤖 API 3: 生成追问');
     const { session_id, current_phase, conversation_history } = req.body;
 
+    console.log('📊 收到的对话历史:', JSON.stringify(conversation_history, null, 2));
+    console.log('📝 对话历史长度:', conversation_history?.length || 0);
+
     if (!session_id || !current_phase) {
         res.status(400).json({
             success: false,
@@ -226,6 +280,8 @@ app.post('/api/rag/profile/generate-followup', async (req: Request, res: Respons
             conversation_history || []
         );
 
+        console.log('📋 生成的提示词长度:', prompt.length);
+
         console.log(`📝 当前阶段: ${current_phase}`);
 
         const response = await ollamaService.generate(prompt);
@@ -233,8 +289,10 @@ app.post('/api/rag/profile/generate-followup', async (req: Request, res: Respons
         let followup;
         try {
             followup = JSON.parse(response);
+            console.log('✅ AI 返回解析成功:', JSON.stringify(followup, null, 2));
         } catch {
             console.error('⚠️ JSON解析失败，返回默认追问');
+            console.error('⚠️ 原始响应:', response.substring(0, 200));
             followup = {
                 question: '能再详细说说这部分吗？',
                 dice_type: 'clarifying',
@@ -243,6 +301,9 @@ app.post('/api/rag/profile/generate-followup', async (req: Request, res: Respons
                 next_phase: null
             };
         }
+
+        console.log('🔔 should_continue:', followup.should_continue);
+        console.log('🔔 next_phase:', followup.next_phase);
 
         res.json({
             success: true,

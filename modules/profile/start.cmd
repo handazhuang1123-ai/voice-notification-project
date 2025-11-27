@@ -18,8 +18,11 @@ cscript //nologo start-hidden.vbs
 echo 等待服务启动并自动打开浏览器...
 timeout /t 8 /nobreak >nul
 
+REM 自动打开浏览器
+start http://localhost:3005
+
 echo.
-echo ✓ 服务已在后台启动！
+echo ✓ 服务已在后台启动！浏览器已打开！
 echo.
 echo   Backend API:  http://localhost:3002
 echo   Frontend UI:  http://localhost:3005

@@ -108,6 +108,21 @@ export function markQuestionCompleted(questionId: string): void {
   }
 }
 
+// 辅助函数：取消问题的"已完成"标记（用于覆盖时重置状态）
+export function unmarkQuestionCompleted(questionId: string): void {
+  const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);
+  if (!completed) return;
+
+  try {
+    let completedIds: string[] = JSON.parse(completed);
+    completedIds = completedIds.filter(id => id !== questionId);
+    localStorage.setItem(STORAGE_KEYS.COMPLETED_QUESTIONS, JSON.stringify(completedIds));
+    console.log(`✅ 已清除问题 ${questionId} 的完成标记，允许重新完成流程`);
+  } catch {
+    // ignore
+  }
+}
+
 // 辅助函数：获取下一个未完成的问题索引
 export function getNextUncompletedQuestionIndex(): number {
   const completed = localStorage.getItem(STORAGE_KEYS.COMPLETED_QUESTIONS);

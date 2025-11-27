@@ -45,12 +45,11 @@ export function Interview() {
   const loadSession = async (sessionId: string) => {
     setLoading(true);
     try {
-      // 直接获取会话数据（后端需要新增此 API 或修改 next-session）
-      // 暂时使用 next-session 逻辑，但实际应该改为根据 sessionId 获取
-      const response = await fetch(`${API_BASE_URL}/next-session?user_id=default_user`);
+      // ✅ 使用修改后的 API 2，传入 session_id 参数
+      const response = await fetch(`${API_BASE_URL}/next-session?session_id=${sessionId}`);
       const data = await response.json();
 
-      if (data.has_next && data.session.session_id === sessionId) {
+      if (data.has_next && data.session) {
         setCurrentSession(data.session);
         setConversationHistory(data.session.conversation_history || []);
 
@@ -105,7 +104,14 @@ export function Interview() {
     const userMessage = currentMessage.trim();
     setCurrentMessage('');
 
-    // 添加用户消息
+    // 构造新的用户消息对象
+    const newUserMessage: Message = {
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date().toISOString()
+    };
+
+    // 添加用户消息到前端显示
     addMessage('user', userMessage);
 
     setLoading(true);
@@ -118,7 +124,8 @@ export function Interview() {
         body: JSON.stringify({
           session_id: currentSession.session_id,
           user_answer: userMessage,
-          current_phase: currentPhase
+          current_phase: currentPhase,
+          conversation_history: [...conversationHistory, newUserMessage]  // ✅ 包含最新用户消息
         })
       });
 
@@ -127,6 +134,16 @@ export function Interview() {
       if (result.success) {
         // 添加 AI 追问
         addMessage('ai', result.followup_question);
+
+        // ✅ 处理 AI 阶段转换建议
+        if (result.should_continue === false && result.next_phase_suggestion) {
+          const nextPhaseName = PHASES[result.next_phase_suggestion as InterviewPhase]?.name;
+          if (nextPhaseName) {
+            setStatusMessage(
+              `💡 AI建议：当前阶段「${PHASES[currentPhase].name}」已充分探索，建议进入「${nextPhaseName}」阶段。您可以点击下方"结束当前阶段"按钮。`
+            );
+          }
+        }
       } else {
         setStatusMessage(`生成追问失败: ${result.message}`);
       }
