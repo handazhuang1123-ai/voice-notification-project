@@ -1,0 +1,35 @@
+{
+  "name": "profile-2",
+  "displayName": "Personal Portrait System V2",
+  "description": "DICE+GROW 个人画像问卷系统 V2 - 四阶段按需组合",
+  "version": "1.0.0",
+  "ports": {
+    "frontend": 3002,
+    "backend": 3102
+  },
+  "ollama": {
+    "baseUrl": "http://localhost:11434",
+    "defaultModel": "qwen2.5:14b-instruct",
+    "availableModels": [
+      "qwen2.5:14b-instruct",
+      "deepseek-v2.5",
+      "qwen3:14b"
+    ],
+    "options": {
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "num_ctx": 65536,
+      "num_predict": 512,
+      "repeat_penalty": 1.3
+    },
+    "timeout": 180000
+  },
+  "database": {
+    "path": "./data/profile-v2.db"
+  },
+  "features": {
+    "dataProtection": true,
+    "sessionResume": true,
+    "ragSync": true
+  }
+}
