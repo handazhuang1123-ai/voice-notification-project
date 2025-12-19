@@ -5,61 +5,72 @@
 
 export const PHASE_EVALUATION_PROMPT = `你是一个对话阶段评估器。根据当前对话状态，判断是否应该转换到下一阶段。
 
-【当前阶段】{current_phase}
-【问题类型】{question_id}
-【已对话轮数】{turn_count}
-【阶段最小轮数】{min_turns}
-【阶段最大轮数】{max_turns}
+【当前状态】
+- 阶段: {current_phase}
+- 问题: {question_id}
+- 已对话: {turn_count} 轮
+- 轮数范围: {min_turns}-{max_turns}
 
-【阶段配置】
+【已收集信息】
 {phase_config}
 
 【最近对话】
 {recent_turns}
 
-【评估标准】
+【核心原则】
+1. 质量优先于轮数：如果已收集足够信息，即使未达最小轮数也应转换
+2. 避免过度挖掘：用户重复或话题枯竭时必须转换
+3. 最小轮数仅作参考，不是硬性门槛
+
+【评估规则】
 
 ## Opening → Values Narrative
-- 用户已给出有内容的回答
-- 气氛已经建立
+条件：用户已给出实质性回答（1轮即可）
 
-## Values Narrative → Deep Exploration / GROW / Summary
-转换条件（满足任一）：
-- 已识别2-3个核心价值观
-- 用户开始重复之前的内容
-- 达到最大轮数
-- 用户表达希望继续
+## Values Narrative → Deep Exploration
+【必须转换】满足任一：
+- 已识别 ≥3 个价值观（不论轮数）
+- 用户回答开始重复或变短
+- 轮数 ≥ 最小轮数 且 已识别 ≥2 个价值观
 
-保持条件：
-- 用户正在展开新的故事
-- 有新的价值线索出现
-- 未达到最小轮数
+【建议转换】满足任一：
+- 已识别 ≥2 个价值观 且 轮数 ≥ 3
+- 用户主动表达想深入某个话题
 
-## Deep Exploration → GROW / Summary
-转换条件：
-- 深度已达到第3层
-- 用户对核心洞察表示认同
-- 达到该阶段分配的轮数
+【继续探索】同时满足：
+- 已识别 <2 个价值观
+- 轮数 < 最小轮数
+- 用户仍在展开新内容
 
-## GROW各子阶段
-- Goal → Reality: 目标已明确（SMART检验通过3项以上）
-- Reality → Options: 现状已清晰，障碍已识别
-- Options → Way Forward: 已生成3+选项，用户有倾向
-- Way Forward → Summary: 行动计划已制定，承诺度已确认
+## Deep Exploration → summary（如无GROW）或 grow（如有GROW）
+【必须转换】满足任一：
+- 用户对洞察表示认同（"是的"、"确实"、"没想到"等）
+- 同一话题追问超过 3 轮
+- 轮数达到最大轮数的 70%
 
-## Any → Summary
-强制转换条件：
-- 达到总最大轮数
-- 用户明确表示想结束
+注意：nextPhase 必须是以下有效值之一：
+- "values_narrative"
+- "deep_exploration"
+- "grow"
+- "summary"
+
+## GROW 子阶段（仅当问题配置包含GROW时）
+- Goal → Reality: 目标已明确
+- Reality → Options: 障碍已识别
+- Options → Way Forward: 用户有明确倾向
+- Way Forward → summary: 有具体第一步
+
+## 强制转换（优先级最高）
+- 达到最大轮数 → nextPhase: "summary"
+- 用户说"结束"、"够了"、"就这些" → nextPhase: "summary"
 
 【输出格式】
-以JSON格式输出：
 {
   "shouldTransition": true/false,
-  "nextPhase": "下一阶段名称（如果应该转换）",
+  "nextPhase": "下一阶段名称",
   "confidence": 0.0-1.0,
-  "reasoning": "判断理由",
-  "signals": ["支持该判断的具体信号"]
+  "reasoning": "简短理由（一句话）",
+  "signals": ["具体信号1", "具体信号2"]
 }`;
 
 export const COMPLETION_CHECK_PROMPT = `你是一个对话完成度检查器。评估当前问题的探索是否充分。

@@ -9,6 +9,12 @@ import { db } from './database.js';
 import { logger } from './logger.js';
 import { getQuestionStrategy, getNextPhase } from '../config.js';
 import { PHASE_EVALUATION_PROMPT, COMPLETION_CHECK_PROMPT } from '../prompts/phase-evaluation.js';
+import {
+  PhaseEvaluationSchema,
+  CompletionCheckSchema,
+  type PhaseEvaluationResponse,
+  type CompletionCheckResponse
+} from '../schemas/index.js';
 import type { PhaseType, PhaseEvaluationResult } from '../types.js';
 
 /** 完成度检查结果 */
@@ -47,13 +53,19 @@ class PhaseEvaluator {
     const phaseTurns = db.getPhaseTurns(sessionId, currentPhase);
     const recentTurns = turns.slice(-3);
 
+    // 确保轮数限制有默认值
+    const turnLimits = {
+      minTurns: strategy.minTurns ?? 5,
+      maxTurns: strategy.maxTurns ?? 20
+    };
+
     // 快速规则检查
     const quickResult = this.quickRuleCheck(
       currentPhase,
       turns.length,
       phaseTurns.length,
       values.length,
-      strategy,
+      turnLimits,
       session.question_id
     );
 
@@ -70,14 +82,48 @@ class PhaseEvaluator {
       currentPhase,
       session.question_id,
       turns.length,
-      strategy,
+      turnLimits,
       recentTurns,
       values
     );
 
     try {
-      const response = await ollamaService.generate(prompt, sessionId);
-      const result = ollamaService.parseJsonResponse<PhaseEvaluationResult>(response, sessionId);
+      // 使用 Structured Outputs 进行 AI 评估
+      const structured = await ollamaService.generateStructured<PhaseEvaluationResponse>(
+        prompt,
+        [], // 无历史消息
+        PhaseEvaluationSchema,
+        sessionId
+      );
+
+      // 转换为 PhaseEvaluationResult 格式
+      const result: PhaseEvaluationResult = {
+        shouldTransition: structured.shouldTransition,
+        nextPhase: structured.nextPhase as PhaseType,
+        confidence: structured.confidence,
+        reasoning: structured.reasoning,
+        signals: structured.signals
+      };
+
+      // 验证并修正 nextPhase
+      // 1. 检查是否是有效阶段名
+      // 2. 更重要：检查该阶段是否在当前问题的配置中（使用 getNextPhase）
+      if (result.shouldTransition && result.nextPhase) {
+        const configuredNextPhase = getNextPhase(session.question_id, currentPhase);
+
+        // AI 返回的阶段必须与配置的下一阶段匹配
+        if (result.nextPhase !== configuredNextPhase) {
+          logger.warn('phase', 'AI returned phase not matching config, using configured phase', {
+            session_id: sessionId,
+            data: {
+              ai_suggested: result.nextPhase,
+              configured: configuredNextPhase,
+              question_id: session.question_id
+            }
+          });
+          result.nextPhase = configuredNextPhase || 'summary';
+        }
+      }
 
       logger.info('phase', 'AI evaluation complete', {
         session_id: sessionId,
@@ -131,12 +177,13 @@ class PhaseEvaluator {
       });
 
       // 降级：使用简单规则
-      return this.fallbackEvaluation(currentPhase, turns.length, strategy, session.question_id);
+      return this.fallbackEvaluation(currentPhase, turns.length, turnLimits, session.question_id);
     }
   }
 
   /**
    * 快速规则检查（不需要AI）
+   * 优先级从高到低执行，命中即返回
    */
   private quickRuleCheck(
     currentPhase: PhaseType,
@@ -146,36 +193,93 @@ class PhaseEvaluator {
     strategy: { minTurns: number; maxTurns: number },
     questionId: string
   ): PhaseEvaluationResult | null {
-    // 强制转换：达到最大轮数
+    // 规则1：强制转换 - 达到最大轮数
     if (totalTurns >= strategy.maxTurns) {
       return {
         shouldTransition: true,
         nextPhase: 'summary',
         confidence: 1,
-        reasoning: '达到最大轮数，强制进入总结'
+        reasoning: '达到最大轮数，强制进入总结',
+        signals: [`totalTurns=${totalTurns}`, `maxTurns=${strategy.maxTurns}`]
       };
     }
 
-    // Opening 阶段：1-2轮后自动转换
+    // 规则2：Opening 阶段 - 1轮后自动转换
     if (currentPhase === 'opening' && phaseTurns >= 1) {
       const nextPhase = getNextPhase(questionId, currentPhase);
       if (nextPhase) {
         return {
           shouldTransition: true,
           nextPhase,
-          confidence: 0.9,
-          reasoning: 'Opening阶段完成，进入主要叙事'
+          confidence: 0.95,
+          reasoning: 'Opening阶段完成',
+          signals: ['用户已回答初始问题']
         };
       }
     }
 
-    // 价值观验证阶段：特殊处理
+    // 规则3：Values Narrative - 价值观数量触发
+    if (currentPhase === 'values_narrative') {
+      const nextPhase = getNextPhase(questionId, currentPhase);
+
+      // 3a：已识别≥4个价值观，无论轮数都转换
+      if (valueCount >= 4 && nextPhase) {
+        return {
+          shouldTransition: true,
+          nextPhase,
+          confidence: 0.9,
+          reasoning: '已收集足够价值观信息',
+          signals: [`valueCount=${valueCount}`, '质量优先于轮数']
+        };
+      }
+
+      // 3b：已识别≥2个价值观 且 达到最小轮数
+      if (valueCount >= 2 && totalTurns >= strategy.minTurns && nextPhase) {
+        return {
+          shouldTransition: true,
+          nextPhase,
+          confidence: 0.85,
+          reasoning: '达到最小轮数且已有价值观基础',
+          signals: [`valueCount=${valueCount}`, `turns=${totalTurns}/${strategy.minTurns}`]
+        };
+      }
+
+      // 3c：轮数达到最大轮数的70%
+      if (totalTurns >= Math.floor(strategy.maxTurns * 0.7) && nextPhase) {
+        return {
+          shouldTransition: true,
+          nextPhase,
+          confidence: 0.8,
+          reasoning: '对话已较长，进入深度探索',
+          signals: [`turns=${totalTurns}`, `70%_threshold=${Math.floor(strategy.maxTurns * 0.7)}`]
+        };
+      }
+    }
+
+    // 规则4：Deep Exploration - 轮数触发
+    if (currentPhase === 'deep_exploration') {
+      const nextPhase = getNextPhase(questionId, currentPhase);
+
+      // 在深度探索阶段停留超过4轮
+      if (phaseTurns >= 4 && nextPhase) {
+        return {
+          shouldTransition: true,
+          nextPhase,
+          confidence: 0.85,
+          reasoning: '深度探索充分',
+          signals: [`phaseTurns=${phaseTurns}`]
+        };
+      }
+    }
+
+    // 规则5：Values Validation - 3轮后完成
     if (currentPhase === 'values_validation' && phaseTurns >= 3) {
       return {
         shouldTransition: true,
         nextPhase: 'summary',
-        confidence: 0.85,
-        reasoning: '价值观验证已完成'
+        confidence: 0.9,
+        reasoning: '价值观验证已完成',
+        signals: [`phaseTurns=${phaseTurns}`]
       };
     }
 
@@ -295,18 +399,13 @@ class PhaseEvaluator {
       .replace('{summary}', turns.slice(-3).map(t => t.user_message).join('\n'));
 
     try {
-      const response = await ollamaService.generate(prompt, sessionId);
-      const result = ollamaService.parseJsonResponse<{
-        completion_score: number;
-        dimensions: {
-          breadth: number;
-          depth: number;
-          emotion: number;
-          values: number;
-        };
-        missing_aspects: string[];
-        recommendation: 'continue' | 'complete';
-      }>(response, sessionId);
+      // 使用 Structured Outputs 进行完成度检查
+      const result = await ollamaService.generateStructured<CompletionCheckResponse>(
+        prompt,
+        [], // 无历史消息
+        CompletionCheckSchema,
+        sessionId
+      );
 
       return {
         completionScore: result.completion_score,

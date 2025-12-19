@@ -1,10 +1,12 @@
 /**
  * Profile-2 追问生成器
  * 基于当前阶段和上下文生成AI追问
+ * 使用 Ollama Structured Outputs 保证 JSON 输出可靠性
  */
 
 import { ollamaService } from './ollama-service.js';
 import { contextManager } from './context-manager.js';
+import { contextCompressor } from './context-compressor.js';
 import { phaseEvaluator } from './phase-evaluator.js';
 import { growHandler } from './grow-handler.js';
 import { db } from './database.js';
@@ -17,6 +19,15 @@ import {
   SUMMARY_PROMPT,
   ENHANCED_SUMMARY_PROMPT
 } from '../prompts/system-prompts.js';
+import {
+  ValuesNarrativeSchema,
+  ValuesValidationSchema,
+  DeepExplorationSchema,
+  SummarySchema,
+  EnhancedSummarySchema,
+  type SummaryResponse,
+  type EnhancedSummaryResponse
+} from '../schemas/index.js';
 import type {
   PhaseType,
   GenerateResponse,
@@ -35,7 +46,7 @@ class QuestionGenerator {
 
     // 获取上下文
     const context = contextManager.buildContext(sessionId);
-    const { session, turns, strategy } = context;
+    const { session, turns, values, strategy } = context;
     const currentPhase = session.current_phase as PhaseType;
 
     logger.debug('context', 'Generating response', {
@@ -47,8 +58,15 @@ class QuestionGenerator {
       }
     });
 
-    // 构建消息历史
-    const messages = this.buildMessages(turns, userMessage);
+    // 检查是否需要压缩上下文
+    const compressed = await contextCompressor.compress(sessionId, turns, values);
+
+    // 构建消息历史（使用压缩后的上下文）
+    const messages = this.buildMessages(
+      compressed.compressed ? compressed.recentTurns : turns,
+      userMessage,
+      compressed.compressed ? contextCompressor.formatCompressedContext(compressed) : undefined
+    );
 
     let aiResponse: string;
     let probeType: string | undefined;
@@ -69,20 +87,69 @@ class QuestionGenerator {
       if (growResult.nextSubPhase === null) {
         // GROW已完成，触发阶段转换
         await phaseEvaluator.transition(sessionId, 'summary', 'GROW阶段完成');
+
+        // 保存GROW阶段的最后一轮
+        db.addTurn({
+          sessionId,
+          turnNumber: turns.length + 1,
+          phase: currentPhase,
+          userMessage,
+          aiMessage: aiResponse,
+          probeType: 'grow_complete'
+        });
+        db.updateSessionTurnCount(sessionId, turns.length + 1);
+
+        const duration = Date.now() - startTime;
+        logger.info('context', 'GROW completed, ready for summary', {
+          session_id: sessionId,
+          duration_ms: duration
+        });
+
+        // 返回标记让前端调用独立的 summary API
+        return {
+          response: aiResponse,
+          phase: 'summary' as PhaseType,
+          turnNumber: turns.length + 1,
+          phaseTransition: {
+            from: currentPhase,
+            to: 'summary' as PhaseType,
+            reason: 'GROW阶段完成'
+          },
+          isComplete: false,
+          requiresSummary: true,  // 新标记：需要前端调用 summary API
+          metadata: {}
+        };
       }
     } else {
       // 其他阶段：使用通用流程
       const systemPrompt = this.getPhasePrompt(currentPhase, sessionId, context);
-      const response = await ollamaService.generateWithHistory(
-        systemPrompt,
-        messages,
-        sessionId
-      );
-      const parsed = this.parseResponse(response, currentPhase, sessionId);
-      aiResponse = parsed.response;
-      probeType = parsed.probeType;
-      reasoning = parsed.reasoning;
-      detectedValues = parsed.detectedValues;
+
+      // Opening阶段纯文本，其他阶段使用 Structured Outputs
+      if (currentPhase === 'opening') {
+        const response = await ollamaService.generateWithHistory(
+          systemPrompt,
+          messages,
+          sessionId
+        );
+        aiResponse = response.trim();
+      } else {
+        const schema = this.getPhaseSchema(currentPhase, strategy?.summaryEnhanced);
+        const structured = await ollamaService.generateStructured<{
+          response: string;
+          dice_type?: string;
+          detected_values?: string[];
+          reasoning?: string;
+        }>(
+          systemPrompt,
+          messages,
+          schema,
+          sessionId
+        );
+        aiResponse = structured.response;
+        probeType = structured.dice_type;
+        reasoning = structured.reasoning;
+        detectedValues = structured.detected_values;
+      }
     }
 
     // 保存轮次
@@ -117,6 +184,32 @@ class QuestionGenerator {
           evaluation.nextPhase,
           evaluation.reasoning
         );
+
+        // 如果转换到 summary 阶段，返回标记让前端调用 summary API
+        if (evaluation.nextPhase === 'summary') {
+          const duration = Date.now() - startTime;
+          logger.info('context', 'Phase transitioned to summary, ready for summary generation', {
+            session_id: sessionId,
+            duration_ms: duration
+          });
+
+          return {
+            response: aiResponse,
+            phase: 'summary' as PhaseType,
+            turnNumber: turns.length + 1,
+            phaseTransition: {
+              from: currentPhase,
+              to: 'summary' as PhaseType,
+              reason: evaluation.reasoning
+            },
+            isComplete: false,
+            requiresSummary: true,  // 新标记：需要前端调用 summary API
+            metadata: {
+              probeType,
+              detectedValues
+            }
+          };
+        }
       }
     }
 
@@ -145,6 +238,25 @@ class QuestionGenerator {
         detectedValues
       }
     };
+  }
+
+  /**
+   * 获取阶段对应的 Zod Schema
+   * 用于 Ollama Structured Outputs
+   */
+  private getPhaseSchema(phase: PhaseType, summaryEnhanced?: boolean) {
+    switch (phase) {
+      case 'values_narrative':
+        return ValuesNarrativeSchema;
+      case 'values_validation':
+        return ValuesValidationSchema;
+      case 'deep_exploration':
+        return DeepExplorationSchema;
+      case 'summary':
+        return summaryEnhanced ? EnhancedSummarySchema : SummarySchema;
+      default:
+        return ValuesNarrativeSchema;
+    }
   }
 
   /**
@@ -186,14 +298,26 @@ class QuestionGenerator {
 
   /**
    * 构建消息历史
+   * @param turns - 对话轮次（可能是压缩后的最近轮次）
+   * @param currentUserMessage - 当前用户消息
+   * @param compressionSummary - 压缩摘要文本（如果已压缩）
    */
   private buildMessages(
     turns: Array<{ user_message: string; ai_message: string }>,
-    currentUserMessage: string
+    currentUserMessage: string,
+    compressionSummary?: string
   ): Message[] {
     const messages: Message[] = [];
 
-    // 最近5轮对话
+    // 如果有压缩摘要，作为系统上下文添加
+    if (compressionSummary) {
+      messages.push({
+        role: 'system',
+        content: compressionSummary
+      });
+    }
+
+    // 最近5轮对话（或全部，如果已压缩则只有最近几轮）
     const recentTurns = turns.slice(-5);
     for (const turn of recentTurns) {
       messages.push({ role: 'user', content: turn.user_message });
@@ -208,6 +332,7 @@ class QuestionGenerator {
 
   /**
    * 解析AI响应
+   * @deprecated 已由 generateStructured() 替代，仅保留作为降级方案
    */
   private parseResponse(
     response: string,
@@ -309,54 +434,15 @@ class QuestionGenerator {
 
   /**
    * 生成最终总结
+   * @deprecated 请使用独立的 summaryGenerator.generate() 代替
+   * 此方法保留仅为向后兼容
    */
   async generateFinalSummary(sessionId: string): Promise<string> {
-    const context = contextManager.buildContext(sessionId);
-    const { session, turns, values, insights, goals, strategy } = context;
-
-    const prompt = strategy?.summaryEnhanced
-      ? ENHANCED_SUMMARY_PROMPT
-      : SUMMARY_PROMPT;
-
-    const contextText = `
-【对话历史摘要】
-${contextManager.formatTurnsAsText(turns.slice(-10))}
-
-【发现的价值观】
-${contextManager.formatValuesAsText(values)}
-
-【关键洞察】
-${contextManager.formatInsightsAsText(insights)}
-
-【目标与行动】
-${contextManager.formatGoalsAsText(goals)}
-`;
-
-    const fullPrompt = prompt + '\n\n' + contextText;
-
-    const response = await ollamaService.generate(fullPrompt, sessionId);
-
-    try {
-      const parsed = ollamaService.parseJsonResponse<{
-        summary?: string;
-        integrated_summary?: string;
-        final_message?: string;
-      }>(response, sessionId);
-
-      const summary = parsed.integrated_summary || parsed.summary || response;
-      const finalMessage = parsed.final_message || '';
-
-      const finalSummary = finalMessage ? `${summary}\n\n${finalMessage}` : summary;
-
-      // 保存并完成会话
-      db.completeSession(sessionId, finalSummary);
-
-      return finalSummary;
-    } catch {
-      // 降级处理
-      db.completeSession(sessionId, response);
-      return response;
-    }
+    // 委托给独立的 summaryGenerator
+    const { summaryGenerator } = await import('./summary-generator.js');
+    const result = await summaryGenerator.generate(sessionId);
+    summaryGenerator.savePending(sessionId, result.summary);
+    return result.summary;
   }
 }
 

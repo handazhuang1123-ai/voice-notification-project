@@ -356,6 +356,12 @@ export interface GenerateResponse {
     to: PhaseType;
     reason?: string;
   };
+  /** 会话是否已完成（进入总结阶段） */
+  isComplete?: boolean;
+  /** 是否需要用户审批入库 */
+  requiresApproval?: boolean;
+  /** 是否需要前端调用 summary API 生成总结 */
+  requiresSummary?: boolean;
   metadata?: {
     probeType?: string;
     detectedValues?: string[];

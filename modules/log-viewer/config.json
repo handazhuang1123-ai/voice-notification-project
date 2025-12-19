@@ -5,7 +5,7 @@
   },
   "paths": {
     "viewerRoot": "../../viewers",
-    "logFile": "../../.claude/hooks/extensions/voice-summary/logs/voice-unified.log",
+    "logFile": "C:/Users/Administrator/.claude/hooks/extensions/voice-summary/logs/-mnt-h-HZH-Little-Projects-voice-notification-project/voice-unified.log",
     "outputJson": "./data/logs.json"
   },
   "longPolling": {

@@ -133,15 +133,49 @@ class DatabaseService {
     stmt.run(turnCount, sessionId);
   }
 
+  /**
+   * 生成总结后设置为待审核状态（用户确认前）
+   */
   completeSession(sessionId: string, finalSummary: string): void {
     const stmt = this.db.prepare(`
       UPDATE sessions
-      SET status = 'completed', final_summary = ?, completed_at = ?
+      SET status = 'pending_approval', final_summary = ?, completed_at = ?
       WHERE session_id = ?
     `);
     stmt.run(finalSummary, this.now(), sessionId);
 
-    logger.info('db', 'Session completed', { session_id: sessionId });
+    logger.info('db', 'Session pending approval', { session_id: sessionId });
+  }
+
+  /**
+   * 用户确认入库
+   */
+  approveSession(sessionId: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE sessions
+      SET status = 'approved'
+      WHERE session_id = ?
+    `);
+    stmt.run(sessionId);
+
+    logger.info('db', 'Session approved by user', { session_id: sessionId });
+  }
+
+  /**
+   * 用户拒绝入库
+   */
+  rejectSession(sessionId: string, reason?: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE sessions
+      SET status = 'rejected', archived_reason = ?
+      WHERE session_id = ?
+    `);
+    stmt.run(reason || 'user_rejected', sessionId);
+
+    logger.info('db', 'Session rejected by user', {
+      session_id: sessionId,
+      data: { reason }
+    });
   }
 
   archiveSession(sessionId: string, reason: string): void {

@@ -13,6 +13,16 @@ import {
   GROW_OPTIONS_PROMPT,
   GROW_WAY_FORWARD_PROMPT
 } from '../prompts/system-prompts.js';
+import {
+  GrowGoalSchema,
+  GrowRealitySchema,
+  GrowOptionsSchema,
+  GrowWayForwardSchema,
+  type GrowGoalResponse,
+  type GrowRealityResponse,
+  type GrowOptionsResponse,
+  type GrowWayForwardResponse
+} from '../schemas/index.js';
 import type { Message } from '../types.js';
 
 // ============ 类型定义 ============
@@ -99,14 +109,22 @@ class GrowHandler {
       data: { sub_phase: subPhase }
     });
 
-    // 获取对应的prompt
+    // 获取对应的prompt和schema
     const prompt = this.getPrompt(subPhase, sessionId);
+    const schema = this.getSubPhaseSchema(subPhase);
 
-    // 调用Ollama
-    const response = await ollamaService.generateWithHistory(prompt, messages, sessionId);
+    // 使用 Structured Outputs 调用Ollama
+    const structured = await ollamaService.generateStructured<
+      GrowGoalResponse | GrowRealityResponse | GrowOptionsResponse | GrowWayForwardResponse
+    >(
+      prompt,
+      messages,
+      schema,
+      sessionId
+    );
 
-    // 解析响应
-    const parsed = this.parseResponse(response, subPhase, sessionId);
+    // 将结构化响应转换为 GrowParseResult
+    const parsed = this.convertToParseResult(structured, subPhase);
 
     // 保存数据到数据库
     const goalId = await this.saveData(sessionId, userId, parsed);
@@ -162,6 +180,68 @@ class GrowHandler {
   }
 
   /**
+   * 获取子阶段对应的 Zod Schema
+   */
+  private getSubPhaseSchema(subPhase: GrowSubPhase) {
+    switch (subPhase) {
+      case 'goal':
+        return GrowGoalSchema;
+      case 'reality':
+        return GrowRealitySchema;
+      case 'options':
+        return GrowOptionsSchema;
+      case 'way_forward':
+        return GrowWayForwardSchema;
+    }
+  }
+
+  /**
+   * 将结构化响应转换为 GrowParseResult
+   */
+  private convertToParseResult(
+    structured: GrowGoalResponse | GrowRealityResponse | GrowOptionsResponse | GrowWayForwardResponse,
+    subPhase: GrowSubPhase
+  ): GrowParseResult {
+    const result: GrowParseResult = {
+      response: structured.response,
+      subPhase
+    };
+
+    switch (subPhase) {
+      case 'goal': {
+        const data = structured as GrowGoalResponse;
+        result.extractedGoal = data.extracted_goal;
+        result.goalClarity = data.goal_clarity;
+        result.smartCheck = data.smart_check;
+        break;
+      }
+      case 'reality': {
+        const data = structured as GrowRealityResponse;
+        result.realityElements = data.reality_elements;
+        break;
+      }
+      case 'options': {
+        const data = structured as GrowOptionsResponse;
+        result.optionsGenerated = data.options_generated;
+        result.userPreference = data.user_preference;
+        break;
+      }
+      case 'way_forward': {
+        const data = structured as GrowWayForwardResponse;
+        result.actionPlan = data.action_plan;
+        result.commitmentLevel = data.commitment_level;
+        break;
+      }
+    }
+
+    logger.debug('context', 'GROW structured response converted', {
+      data: { sub_phase: subPhase, has_data: this.hasValidData(result) }
+    });
+
+    return result;
+  }
+
+  /**
    * 获取子阶段对应的prompt
    */
   private getPrompt(subPhase: GrowSubPhase, sessionId: string): string {
@@ -182,6 +262,7 @@ class GrowHandler {
 
   /**
    * 解析GROW响应
+   * @deprecated 已由 convertToParseResult() 替代，仅保留作为降级方案
    */
   private parseResponse(
     response: string,

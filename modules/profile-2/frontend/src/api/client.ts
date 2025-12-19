@@ -4,14 +4,6 @@
 
 const API_BASE = 'http://localhost:3102/api';
 
-interface ApiResponse<T> {
-  success: boolean;
-  error?: {
-    code: string;
-    message: string;
-  };
-  [key: string]: unknown;
-}
 
 class ApiClient {
   private async request<T>(
@@ -80,6 +72,9 @@ class ApiClient {
         to: string;
         reason?: string;
       };
+      is_complete?: boolean;
+      requires_approval?: boolean;
+      requires_summary?: boolean;  // 需要调用 summary API
       progress: {
         current_phase: string;
         phase_index: number;
@@ -134,6 +129,57 @@ class ApiClient {
       summary: string;
     }>(`/session/${sessionId}/complete`, {
       method: 'POST',
+    });
+  }
+
+  /**
+   * 生成会话总结（独立流程）
+   */
+  async generateSummary(sessionId: string) {
+    return this.request<{
+      success: boolean;
+      summary: string;
+      key_insights?: string[];
+      values_discovered?: Array<{
+        domain: string;
+        value: string;
+        evidence: string;
+      }>;
+      action_items?: string[];
+      is_enhanced?: boolean;
+      status: string;
+      requires_approval: boolean;
+    }>(`/session/${sessionId}/summary`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * 确认总结入库
+   */
+  async approveSummary(sessionId: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      session_id: string;
+      status: string;
+    }>(`/session/${sessionId}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * 拒绝总结入库
+   */
+  async rejectSummary(sessionId: string, reason?: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+      session_id: string;
+      status: string;
+    }>(`/session/${sessionId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   }
 

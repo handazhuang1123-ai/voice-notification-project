@@ -25,8 +25,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: true,
     hasGROW: false,
     hasSummary: true,
-    minTurns: 12,
-    maxTurns: 25
+    minTurns: 9,
+    maxTurns: 20
   },
   'education_career': {
     hasOpening: false,
@@ -34,8 +34,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: true,
     hasGROW: true,
     hasSummary: true,
-    minTurns: 15,
-    maxTurns: 35
+    minTurns: 12,
+    maxTurns: 28
   },
   'relationships': {
     hasOpening: false,
@@ -43,8 +43,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: true,
     hasGROW: false,
     hasSummary: true,
-    minTurns: 10,
-    maxTurns: 25
+    minTurns: 9,
+    maxTurns: 18
   },
   'challenges_growth': {
     hasOpening: false,
@@ -52,8 +52,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: true,
     hasGROW: false,
     hasSummary: true,
-    minTurns: 10,
-    maxTurns: 25
+    minTurns: 9,
+    maxTurns: 18
   },
   'achievements_pride': {
     hasOpening: false,
@@ -61,8 +61,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: true,
     hasGROW: false,
     hasSummary: true,
-    minTurns: 10,
-    maxTurns: 25
+    minTurns: 9,
+    maxTurns: 18
   },
   'future_aspirations': {
     hasOpening: false,
@@ -70,8 +70,8 @@ export const QUESTION_CONFIG: Record<string, QuestionStrategy> = {
     hasDeepExploration: false,
     hasGROW: true,
     hasSummary: true,
-    minTurns: 12,
-    maxTurns: 28
+    minTurns: 10,
+    maxTurns: 24
   },
   'values_beliefs': {
     hasOpening: false,

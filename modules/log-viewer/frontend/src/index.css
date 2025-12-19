@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-/* Pip-Boy Theme Variables */
+@plugin "@packages/pip-boy-theme/crt-plugin";
+@config "@packages/pip-boy-theme/tailwind-preset";
+
+/* Pip-Boy Theme Variables - 保持原有变量兼容 */
 @theme {
   --color-pip-green: #4af626;
   --color-pip-green-bright: #6fff4a;
@@ -10,7 +13,6 @@
   --color-pip-dark: #050505;
 }
 
-/* CSS Variables for compatibility */
 :root {
   --pip-green: var(--color-pip-green);
   --pip-green-bright: var(--color-pip-green-bright);

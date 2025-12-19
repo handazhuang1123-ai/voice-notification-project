@@ -171,3 +171,9 @@ viewers/log-viewer/data/logs.json
 # Personal research reports
 # 个人研究报告
 docs/SCS论文核心故事线分析报告_*.md
+
+# WSL path bug junk files
+# WSL 路径 Bug 产生的垃圾文件
+C:\*
+nul
+**/C:\Users\*
