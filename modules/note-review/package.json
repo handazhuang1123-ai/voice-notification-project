@@ -1,0 +1,37 @@
+{
+  "name": "note-review",
+  "version": "0.1.0",
+  "description": "AI 启发式笔记复习系统 - 从 Obsidian 笔记生成复习问题",
+  "type": "module",
+  "main": "backend/dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch backend/src/index.ts",
+    "start": "node backend/dist/index.js",
+    "generate": "tsx backend/src/cli.ts generate",
+    "send": "tsx backend/src/cli.ts send",
+    "list": "tsx backend/src/cli.ts list",
+    "check-replies": "tsx backend/src/cli.ts check-replies",
+    "answers": "tsx backend/src/cli.ts answers"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^17.2.3",
+    "imap-simple": "^5.1.0",
+    "mailparser": "^3.9.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^7.0.12",
+    "resend": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/imap-simple": "^4.2.10",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^22.10.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

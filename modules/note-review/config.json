@@ -1,0 +1,30 @@
+{
+  "module": {
+    "name": "note-review",
+    "description": "AI 启发式笔记复习系统",
+    "version": "0.1.0"
+  },
+  "obsidian": {
+    "notesPath": "../../data/obsidion notes",
+    "readOnly": true,
+    "recentDays": 7
+  },
+  "review": {
+    "questionsPerDay": 2,
+    "questionTypes": ["concept", "relation", "application"],
+    "scheduleTime": "08:00"
+  },
+  "email": {
+    "enabled": true,
+    "provider": "resend",
+    "from": "review@your-domain.com",
+    "to": "handazhuang1123@gmail.com"
+  },
+  "ai": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "database": {
+    "path": "./data/reviews.db"
+  }
+}
